@@ -1,101 +1,391 @@
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Users, AudioWaveform } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Play, Pause, Volume2, VolumeX, Lock, Unlock, Clock, Infinity, Settings } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 
+interface AudioFile {
+  id: string;
+  name: string;
+  duration: string;
+  size: string;
+}
+
+interface AccessInfo {
+  accessType: '24h' | '48h' | 'indefinite';
+  expiresAt: Date | null;
+  isValid: boolean;
+}
+
 const Index = () => {
-  return (
-    <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-6">
-      <div className="max-w-4xl mx-auto text-center space-y-8">
-        <div>
-          <h1 className="text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-4">
-            Audio Access Manager
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Secure audio file sharing with time-based access control. 
-            Administrators can upload files and generate time-limited passwords for users.
-          </p>
+  const [password, setPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [accessInfo, setAccessInfo] = useState<AccessInfo | null>(null);
+  const [currentPlaying, setCurrentPlaying] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const { toast } = useToast();
+
+  // Mock audio files - in real app, these would come from the server
+  const audioFiles: AudioFile[] = [
+    { id: '1', name: 'Track 1.wav', duration: '3:45', size: '8.2 MB' },
+    { id: '2', name: 'Track 2.wav', duration: '4:12', size: '9.1 MB' },
+    { id: '3', name: 'Track 3.wav', duration: '2:58', size: '6.8 MB' },
+    { id: '4', name: 'Track 4.wav', duration: '5:23', size: '11.4 MB' },
+    { id: '5', name: 'Track 5.wav', duration: '3:17', size: '7.5 MB' },
+  ];
+
+  // Mock password validation - in real app, this would be server-side
+  const validatePassword = (inputPassword: string) => {
+    // Simulate some valid passwords for demo
+    const validPasswords = [
+      { password: 'DEMO24H', accessType: '24h' as const, hours: 24 },
+      { password: 'DEMO48H', accessType: '48h' as const, hours: 48 },
+      { password: 'DEMOINF', accessType: 'indefinite' as const, hours: null },
+    ];
+
+    const found = validPasswords.find(p => p.password === inputPassword.toUpperCase());
+    if (found) {
+      const now = new Date();
+      const expiresAt = found.hours ? new Date(now.getTime() + found.hours * 60 * 60 * 1000) : null;
+      
+      return {
+        accessType: found.accessType,
+        expiresAt,
+        isValid: true,
+      };
+    }
+    return null;
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!password.trim()) {
+      toast({
+        title: "Password required",
+        description: "Please enter an access password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const accessData = validatePassword(password);
+    
+    if (accessData) {
+      setAccessInfo(accessData);
+      setIsAuthenticated(true);
+      
+      // Store access info in localStorage for persistence
+      localStorage.setItem('audioAccessInfo', JSON.stringify({
+        ...accessData,
+        enteredAt: new Date().toISOString(),
+      }));
+      
+      toast({
+        title: "Access granted",
+        description: `${accessData.accessType} access activated successfully.`,
+      });
+    } else {
+      toast({
+        title: "Invalid password",
+        description: "The password you entered is not valid or has expired.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const checkAccessExpiry = () => {
+    if (accessInfo && accessInfo.expiresAt) {
+      const now = new Date();
+      if (now > accessInfo.expiresAt) {
+        setIsAuthenticated(false);
+        setAccessInfo(null);
+        localStorage.removeItem('audioAccessInfo');
+        toast({
+          title: "Access expired",
+          description: "Your access period has ended. Please enter a new password.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const playAudio = (fileId: string) => {
+    if (currentPlaying === fileId && isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+    } else {
+      // In a real app, you would load the actual audio file here
+      // For demo, we'll use a placeholder audio element
+      if (audioRef.current) {
+        audioRef.current.src = `https://www.soundjay.com/misc/sounds/bell-ringing-05.wav`; // Demo audio
+        audioRef.current.play();
+        setCurrentPlaying(fileId);
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const toggleMute = () => {
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setAccessInfo(null);
+    setPassword('');
+    setCurrentPlaying(null);
+    setIsPlaying(false);
+    localStorage.removeItem('audioAccessInfo');
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully.",
+    });
+  };
+
+  // Check for existing access on component mount
+  useEffect(() => {
+    const storedAccess = localStorage.getItem('audioAccessInfo');
+    if (storedAccess) {
+      const accessData = JSON.parse(storedAccess);
+      if (accessData.expiresAt) {
+        const expiresAt = new Date(accessData.expiresAt);
+        const now = new Date();
+        if (now <= expiresAt) {
+          setAccessInfo({
+            accessType: accessData.accessType,
+            expiresAt,
+            isValid: true,
+          });
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('audioAccessInfo');
+        }
+      } else {
+        // Indefinite access
+        setAccessInfo({
+          accessType: accessData.accessType,
+          expiresAt: null,
+          isValid: true,
+        });
+        setIsAuthenticated(true);
+      }
+    }
+  }, []);
+
+  // Check access expiry every minute
+  useEffect(() => {
+    const interval = setInterval(checkAccessExpiry, 60000);
+    return () => clearInterval(interval);
+  }, [accessInfo]);
+
+  // Audio event handlers
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateDuration = () => setDuration(audio.duration);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentPlaying(null);
+    };
+
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('loadedmetadata', updateDuration);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('loadedmetadata', updateDuration);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, []);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle relative">
+        {/* Admin Login Button - Top Right */}
+        <div className="absolute top-6 right-6">
+          <Link to="/admin">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Admin
+            </Button>
+          </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-          <Card className="shadow-elegant hover:shadow-glow transition-all duration-300 group">
+        {/* Main Password Entry */}
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <Card className="w-full max-w-md shadow-elegant">
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4">
-                <div className="p-4 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
-                  <Settings className="h-8 w-8 text-primary" />
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <Lock className="h-8 w-8 text-primary" />
                 </div>
               </div>
-              <CardTitle className="text-2xl">Admin Panel</CardTitle>
+              <CardTitle className="text-3xl bg-gradient-primary bg-clip-text text-transparent">
+                Enter Access Key
+              </CardTitle>
               <CardDescription>
-                Upload audio files, generate access passwords, and manage user permissions
+                Please enter your password to access the audio library
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="text-sm text-muted-foreground space-y-2 mb-6">
-                <li>• Upload up to 5 WAV audio files</li>
-                <li>• Generate 24h, 48h, or indefinite access passwords</li>
-                <li>• Monitor active sessions and usage</li>
-                <li>• Manage file permissions and access control</li>
-              </ul>
-              <Link to="/admin">
-                <Button variant="gradient" className="w-full">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Access Admin Panel
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-elegant hover:shadow-glow transition-all duration-300 group">
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="p-4 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
-                  <AudioWaveform className="h-8 w-8 text-primary" />
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="password">Access Password</Label>
+                  <Input
+                    id="password"
+                    type="text"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your access key"
+                    className="mt-2 text-center text-lg font-mono tracking-wider"
+                    autoComplete="off"
+                    autoFocus
+                  />
                 </div>
-              </div>
-              <CardTitle className="text-2xl">User Access</CardTitle>
-              <CardDescription>
-                Enter your access password to listen to available audio files
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-muted-foreground space-y-2 mb-6">
-                <li>• Secure password-based access</li>
-                <li>• Stream audio files directly in browser</li>
-                <li>• Time-limited access with automatic expiry</li>
-                <li>• Clean, intuitive audio player interface</li>
-              </ul>
-              <Link to="/user">
-                <Button variant="default" className="w-full">
-                  <Users className="h-4 w-4 mr-2" />
+                <Button type="submit" className="w-full" variant="gradient" size="lg">
+                  <Unlock className="h-4 w-4 mr-2" />
                   Access Audio Library
                 </Button>
-              </Link>
+              </form>
+              
+              {/* Demo passwords info */}
+              <div className="mt-6 p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground text-center mb-2">Demo Access Keys:</p>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p><code className="bg-background px-2 py-1 rounded font-mono">DEMO24H</code> - 24 hour access</p>
+                  <p><code className="bg-background px-2 py-1 rounded font-mono">DEMO48H</code> - 48 hour access</p>
+                  <p><code className="bg-background px-2 py-1 rounded font-mono">DEMOINF</code> - Indefinite access</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
+      </div>
+    );
+  }
 
-        <div className="mt-12 p-6 bg-card rounded-lg border shadow-elegant">
-          <h3 className="text-lg font-semibold mb-3">How It Works</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-            <div className="text-center">
-              <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-2 font-bold">1</div>
-              <p className="font-medium">Admin Upload</p>
-              <p className="text-muted-foreground">Administrator uploads audio files and sets access parameters</p>
-            </div>
-            <div className="text-center">
-              <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-2 font-bold">2</div>
-              <p className="font-medium">Generate Password</p>
-              <p className="text-muted-foreground">System creates unique passwords with time-based expiration</p>
-            </div>
-            <div className="text-center">
-              <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-2 font-bold">3</div>
-              <p className="font-medium">User Access</p>
-              <p className="text-muted-foreground">Users enter password to access audio files within time limit</p>
-            </div>
+  return (
+    <div className="min-h-screen bg-gradient-subtle relative">
+      {/* Header with access info and logout */}
+      <div className="flex justify-between items-center p-6 border-b bg-background/50 backdrop-blur-sm">
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Audio Library
+          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant="outline" className="flex items-center gap-1">
+              {accessInfo?.accessType === 'indefinite' ? (
+                <Infinity className="h-3 w-3" />
+              ) : (
+                <Clock className="h-3 w-3" />
+              )}
+              {accessInfo?.accessType} access
+            </Badge>
+            {accessInfo?.expiresAt && (
+              <Badge variant="secondary" className="text-xs">
+                Expires: {accessInfo.expiresAt.toLocaleString()}
+              </Badge>
+            )}
           </div>
         </div>
+        <Button variant="outline" onClick={logout}>
+          Logout
+        </Button>
       </div>
+
+      {/* Audio Player */}
+      <div className="p-6">
+        <div className="max-w-4xl mx-auto">
+          <Card className="shadow-elegant">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Volume2 className="h-5 w-5" />
+                Available Audio Files
+              </CardTitle>
+              <CardDescription>
+                Click on any audio file to start playback
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {audioFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md ${
+                      currentPlaying === file.id 
+                        ? 'bg-primary/5 border-primary shadow-glow' 
+                        : 'bg-background hover:bg-muted/50'
+                    }`}
+                    onClick={() => playAudio(file.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant={currentPlaying === file.id && isPlaying ? "default" : "outline"}
+                        size="sm"
+                        className="shrink-0"
+                      >
+                        {currentPlaying === file.id && isPlaying ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <div>
+                        <p className="font-medium">{file.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Duration: {file.duration} • Size: {file.size}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {currentPlaying === file.id && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          {formatTime(currentTime)} / {formatTime(duration)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleMute();
+                          }}
+                        >
+                          {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Hidden audio element */}
+      <audio ref={audioRef} />
     </div>
   );
 };
