@@ -25,6 +25,7 @@ const UserAccess = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessInfo, setAccessInfo] = useState<AccessInfo | null>(null);
   const [currentPlaying, setCurrentPlaying] = useState<string | null>(null);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -118,6 +119,8 @@ const UserAccess = () => {
   };
 
   const playAudio = (fileId: string) => {
+    const trackIndex = audioFiles.findIndex(file => file.id === fileId);
+    
     if (currentPlaying === fileId && isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
@@ -125,11 +128,61 @@ const UserAccess = () => {
       // In a real app, you would load the actual audio file here
       // For demo, we'll use a placeholder audio element
       if (audioRef.current) {
+        // Enable background playback
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: audioFiles[trackIndex]?.name || 'Audio Track',
+            artist: 'Audio Key Guardian',
+            album: 'Audio Collection',
+            artwork: [
+              { src: '/placeholder.svg', sizes: '96x96', type: 'image/svg+xml' },
+              { src: '/placeholder.svg', sizes: '128x128', type: 'image/svg+xml' },
+              { src: '/placeholder.svg', sizes: '192x192', type: 'image/svg+xml' },
+              { src: '/placeholder.svg', sizes: '256x256', type: 'image/svg+xml' },
+            ]
+          });
+
+          navigator.mediaSession.setActionHandler('play', () => {
+            audioRef.current?.play();
+            setIsPlaying(true);
+          });
+
+          navigator.mediaSession.setActionHandler('pause', () => {
+            audioRef.current?.pause();
+            setIsPlaying(false);
+          });
+
+          navigator.mediaSession.setActionHandler('nexttrack', () => {
+            playNextTrack();
+          });
+
+          navigator.mediaSession.setActionHandler('previoustrack', () => {
+            playPreviousTrack();
+          });
+        }
+
         audioRef.current.src = `https://www.soundjay.com/misc/sounds/bell-ringing-05.wav`; // Demo audio
         audioRef.current.play();
         setCurrentPlaying(fileId);
+        setCurrentTrackIndex(trackIndex);
         setIsPlaying(true);
       }
+    }
+  };
+
+  const playNextTrack = () => {
+    const nextIndex = (currentTrackIndex + 1) % audioFiles.length;
+    const nextTrack = audioFiles[nextIndex];
+    if (nextTrack) {
+      playAudio(nextTrack.id);
+    }
+  };
+
+  const playPreviousTrack = () => {
+    const prevIndex = currentTrackIndex === 0 ? audioFiles.length - 1 : currentTrackIndex - 1;
+    const prevTrack = audioFiles[prevIndex];
+    if (prevTrack) {
+      playAudio(prevTrack.id);
     }
   };
 
@@ -203,8 +256,8 @@ const UserAccess = () => {
     const updateTime = () => setCurrentTime(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration);
     const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentPlaying(null);
+      // Auto-advance to next track
+      playNextTrack();
     };
 
     audio.addEventListener('timeupdate', updateTime);

@@ -15,6 +15,13 @@ interface AudioFile {
   uploadDate: Date;
 }
 
+interface CoverArt {
+  id: string;
+  name: string;
+  file: File;
+  uploadDate: Date;
+}
+
 interface AccessPassword {
   id: string;
   password: string;
@@ -26,6 +33,7 @@ interface AccessPassword {
 
 const AdminPanel = () => {
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
+  const [coverArt, setCoverArt] = useState<CoverArt | null>(null);
   const [passwords, setPasswords] = useState<AccessPassword[]>([]);
   const [selectedAccessType, setSelectedAccessType] = useState<'24h' | '48h' | 'indefinite'>('24h');
   const { toast } = useToast();
@@ -54,6 +62,24 @@ const AdminPanel = () => {
     toast({
       title: "Files uploaded successfully",
       description: `${files.length} audio file(s) added.`,
+    });
+  };
+
+  const handleCoverArtUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const newCoverArt: CoverArt = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      file,
+      uploadDate: new Date(),
+    };
+
+    setCoverArt(newCoverArt);
+    toast({
+      title: "Cover art uploaded successfully",
+      description: "Project cover art has been updated.",
     });
   };
 
@@ -186,6 +212,37 @@ const AdminPanel = () => {
                   <p className="text-center text-muted-foreground py-8">
                     No audio files uploaded yet
                   </p>
+                )}
+              </div>
+
+              {/* Cover Art Upload */}
+              <div className="border-t pt-4">
+                <Label htmlFor="cover-upload">Project Cover Art</Label>
+                <Input
+                  id="cover-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverArtUpload}
+                  className="mt-2"
+                />
+                {coverArt && (
+                  <div className="mt-3 p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {coverArt.file && (
+                        <img 
+                          src={URL.createObjectURL(coverArt.file)} 
+                          alt="Cover art preview" 
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium">{coverArt.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Uploaded: {coverArt.uploadDate.toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </CardContent>
