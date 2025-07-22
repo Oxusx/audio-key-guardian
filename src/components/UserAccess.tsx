@@ -322,101 +322,128 @@ const UserAccess = () => {
     );
   }
 
+  // Get cover art from localStorage
+  const coverArt = localStorage.getItem('audioCoverArt');
+
   return (
-    <div className="min-h-screen bg-gradient-subtle p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header with access info */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Audio Library
-            </h1>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="flex items-center gap-1">
-                {accessInfo?.accessType === 'indefinite' ? (
-                  <Infinity className="h-3 w-3" />
-                ) : (
-                  <Clock className="h-3 w-3" />
-                )}
-                {accessInfo?.accessType} access
-              </Badge>
-              {accessInfo?.expiresAt && (
-                <Badge variant="secondary">
-                  Expires: {accessInfo.expiresAt.toLocaleString()}
-                </Badge>
-              )}
-            </div>
-          </div>
-          <Button variant="outline" onClick={logout}>
+    <div className="min-h-screen bg-gradient-subtle">
+      <div className="max-w-md mx-auto">
+        {/* Header with logout */}
+        <div className="flex justify-end p-4">
+          <Button variant="ghost" size="sm" onClick={logout}>
             Logout
           </Button>
         </div>
 
-        {/* Audio Player */}
-        <Card className="shadow-elegant">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Volume2 className="h-5 w-5" />
-              Audio Files
-            </CardTitle>
-            <CardDescription>
-              Click on any audio file to start playback
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {audioFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className={`flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md ${
-                    currentPlaying === file.id 
-                      ? 'bg-primary/5 border-primary shadow-glow' 
-                      : 'bg-background hover:bg-muted/50'
-                  }`}
-                  onClick={() => playAudio(file.id)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant={currentPlaying === file.id && isPlaying ? "default" : "outline"}
-                      size="sm"
-                      className="shrink-0"
-                    >
-                      {currentPlaying === file.id && isPlaying ? (
-                        <Pause className="h-4 w-4" />
-                      ) : (
-                        <Play className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <div>
-                      <p className="font-medium">{file.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Duration: {file.duration} • Size: {file.size}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {currentPlaying === file.id && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {formatTime(currentTime)} / {formatTime(duration)}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleMute();
-                        }}
-                      >
-                        {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                      </Button>
-                    </div>
+        {/* Cover Art */}
+        <div className="px-6 pb-6">
+          <div className="aspect-square w-full mb-6 rounded-2xl overflow-hidden shadow-elegant">
+            {coverArt ? (
+              <img 
+                src={coverArt} 
+                alt="Album Cover" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-primary flex items-center justify-center">
+                <Volume2 className="h-16 w-16 text-white/80" />
+              </div>
+            )}
+          </div>
+
+          {/* Access Info */}
+          <div className="flex justify-center gap-2 mb-8">
+            <Badge variant="outline" className="flex items-center gap-1">
+              {accessInfo?.accessType === 'indefinite' ? (
+                <Infinity className="h-3 w-3" />
+              ) : (
+                <Clock className="h-3 w-3" />
+              )}
+              {accessInfo?.accessType} access
+            </Badge>
+          </div>
+
+          {/* Track List */}
+          <div className="space-y-2">
+            {audioFiles.map((file, index) => (
+              <div
+                key={file.id}
+                className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
+                  currentPlaying === file.id 
+                    ? 'bg-primary/10' 
+                    : 'hover:bg-muted/50'
+                }`}
+                onClick={() => playAudio(file.id)}
+              >
+                <div className="flex items-center justify-center w-8 h-8 rounded bg-muted text-sm font-medium">
+                  {currentPlaying === file.id && isPlaying ? (
+                    <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />
+                  ) : (
+                    index + 1
                   )}
                 </div>
-              ))}
+                <div className="flex-1">
+                  <p className={`font-medium ${currentPlaying === file.id ? 'text-primary' : ''}`}>
+                    {file.name.replace('.wav', '')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom Media Controls - Only show when playing */}
+        {currentPlaying && (
+          <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t">
+            <div className="max-w-md mx-auto p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-medium text-sm">
+                    {audioFiles.find(f => f.id === currentPlaying)?.name.replace('.wav', '')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={playPreviousTrack}
+                  >
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
+                    </svg>
+                  </Button>
+                  
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="rounded-full w-12 h-12"
+                    onClick={() => playAudio(currentPlaying)}
+                  >
+                    {isPlaying ? (
+                      <Pause className="h-5 w-5" />
+                    ) : (
+                      <Play className="h-5 w-5" />
+                    )}
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={playNextTrack}
+                  >
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798l-5.445-3.63z" />
+                    </svg>
+                  </Button>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
         {/* Hidden audio element */}
         <audio ref={audioRef} />
