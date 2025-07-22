@@ -36,6 +36,7 @@ const AdminPanel = () => {
   const [coverArt, setCoverArt] = useState<CoverArt | null>(null);
   const [passwords, setPasswords] = useState<AccessPassword[]>([]);
   const [selectedAccessType, setSelectedAccessType] = useState<'24h' | '48h' | 'indefinite'>('24h');
+  const [investmentBudget, setInvestmentBudget] = useState<number>(0);
   const { toast } = useToast();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -333,6 +334,60 @@ const AdminPanel = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Investment Budget */}
+        <Card className="shadow-elegant">
+          <CardHeader>
+            <CardTitle>Investment Budget</CardTitle>
+            <CardDescription>
+              Set the total investment budget for merch sales and live concert ticket sales
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <Label htmlFor="budget">Investment Budget ($)</Label>
+                <Input
+                  id="budget"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={investmentBudget}
+                  onChange={(e) => setInvestmentBudget(Number(e.target.value))}
+                  placeholder="Enter total budget"
+                  className="mt-2"
+                />
+              </div>
+              <Button 
+                variant="gradient"
+                onClick={() => {
+                  localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
+                  toast({
+                    title: "Budget updated",
+                    description: `Investment budget set to $${investmentBudget.toLocaleString()}`,
+                  });
+                }}
+                disabled={investmentBudget <= 0}
+              >
+                Set Budget
+              </Button>
+            </div>
+            {investmentBudget > 0 && (
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Admin Investment (50%)</p>
+                    <p className="font-semibold text-primary">${(investmentBudget * 0.5).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Available for Users (50%)</p>
+                    <p className="font-semibold text-success">${(investmentBudget * 0.5).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Statistics */}
         <Card className="shadow-elegant">

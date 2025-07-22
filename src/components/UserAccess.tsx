@@ -364,7 +364,7 @@ const UserAccess = () => {
           </div>
 
           {/* Track List */}
-          <div className="space-y-2">
+          <div className="space-y-2 mb-6">
             {audioFiles.map((file, index) => (
               <div
                 key={file.id}
@@ -389,6 +389,18 @@ const UserAccess = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Investment Button */}
+          <div className="flex justify-center">
+            <Button 
+              variant="gradient" 
+              size="lg"
+              className="w-full max-w-xs"
+              onClick={() => window.location.href = '/investment'}
+            >
+              💰 Invest
+            </Button>
           </div>
         </div>
 
