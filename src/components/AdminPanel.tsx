@@ -79,9 +79,67 @@ const AdminPanel = () => {
 
     setCoverArt(newCoverArt);
     toast({
-      title: "Cover art uploaded successfully",
-      description: "Project cover art has been updated.",
+      title: "Cover art selected",
+      description: "Click 'Save Project Settings' to apply changes.",
     });
+  };
+
+  const handleSaveProjectSettings = () => {
+    let savedItems = [];
+
+    // Save cover art
+    if (coverArt) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        localStorage.setItem('audioCoverArt', result);
+        savedItems.push('cover art');
+        
+        // Save audio files info (in real app, you'd upload to server)
+        if (audioFiles.length > 0) {
+          const audioInfo = audioFiles.map(file => ({
+            id: file.id,
+            name: file.name,
+            uploadDate: file.uploadDate
+          }));
+          localStorage.setItem('audioFilesInfo', JSON.stringify(audioInfo));
+          savedItems.push('audio files');
+        }
+        
+        // Save investment budget
+        if (investmentBudget > 0) {
+          localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
+          savedItems.push('investment budget');
+        }
+
+        toast({
+          title: "Project settings saved",
+          description: `Successfully saved: ${savedItems.join(', ')}. Check the user page to see your changes.`,
+        });
+      };
+      reader.readAsDataURL(coverArt.file);
+    } else {
+      // Save without cover art
+      if (audioFiles.length > 0) {
+        const audioInfo = audioFiles.map(file => ({
+          id: file.id,
+          name: file.name,
+          uploadDate: file.uploadDate
+        }));
+        localStorage.setItem('audioFilesInfo', JSON.stringify(audioInfo));
+        savedItems.push('audio files');
+      }
+      
+      if (investmentBudget > 0) {
+        localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
+        savedItems.push('investment budget');
+      }
+
+      toast({
+        title: "Project settings saved",
+        description: `Successfully saved: ${savedItems.join(', ')}. Check the user page to see your changes.`,
+      });
+    }
   };
 
   const generatePassword = () => {
@@ -335,6 +393,26 @@ const AdminPanel = () => {
           </Card>
         </div>
 
+        {/* Save Project Settings */}
+        <Card className="shadow-elegant">
+          <CardHeader>
+            <CardTitle>Save Project Settings</CardTitle>
+            <CardDescription>
+              Save your uploaded files and settings to see them on the user side
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={handleSaveProjectSettings}
+              className="w-full"
+              variant="gradient"
+              disabled={!coverArt && audioFiles.length === 0 && investmentBudget <= 0}
+            >
+              Save Project Settings
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Investment Budget */}
         <Card className="shadow-elegant">
           <CardHeader>
@@ -358,19 +436,6 @@ const AdminPanel = () => {
                   className="mt-2"
                 />
               </div>
-              <Button 
-                variant="gradient"
-                onClick={() => {
-                  localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
-                  toast({
-                    title: "Budget updated",
-                    description: `Investment budget set to $${investmentBudget.toLocaleString()}`,
-                  });
-                }}
-                disabled={investmentBudget <= 0}
-              >
-                Set Budget
-              </Button>
             </div>
             {investmentBudget > 0 && (
               <div className="mt-4 p-4 bg-muted rounded-lg">
