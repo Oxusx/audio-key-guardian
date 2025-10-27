@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Pause, Volume2, VolumeX, Unlock, Settings } from 'lucide-react';
+import { Play, Volume2, Settings, Unlock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import defaultCover from '@/assets/cover-art.jpeg';
 
 interface AudioFile {
@@ -20,17 +20,11 @@ interface AccessInfo {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessInfo, setAccessInfo] = useState<AccessInfo | null>(null);
-  const [currentPlaying, setCurrentPlaying] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [coverArt, setCoverArt] = useState<string>('');
-  const [savedAudio, setSavedAudio] = useState<string>('');
-  const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
 
   // Mock audio files - in real app, these would come from the server
@@ -119,40 +113,21 @@ const Index = () => {
   };
 
   const playAudio = (fileId: string) => {
-    if (currentPlaying === fileId && isPlaying) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
-    } else {
-      // In a real app, you would load the actual audio file here
-      // For demo, we'll use a placeholder audio element
-      if (audioRef.current) {
-        audioRef.current.src = `https://www.soundjay.com/misc/sounds/bell-ringing-05.wav`; // Demo audio
-        audioRef.current.play();
-        setCurrentPlaying(fileId);
-        setIsPlaying(true);
-      }
+    const selectedTrack = audioFiles.find(f => f.id === fileId);
+    if (selectedTrack) {
+      navigate('/player', { 
+        state: { 
+          track: selectedTrack,
+          allTracks: audioFiles
+        } 
+      });
     }
-  };
-
-  const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setAccessInfo(null);
     setPassword('');
-    setCurrentPlaying(null);
-    setIsPlaying(false);
     localStorage.removeItem('audioAccessInfo');
     toast({
       title: "Logged out",
@@ -196,39 +171,14 @@ const Index = () => {
     return () => clearInterval(interval);
   }, [accessInfo]);
 
-  // Audio event handlers
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentPlaying(null);
-    };
-
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, []);
-
-  // Load saved cover art and audio
+  // Load saved cover art
   useEffect(() => {
     const savedCover = localStorage.getItem('projectCoverArt');
-    const savedAudioFile = localStorage.getItem('projectAudio');
     if (savedCover) {
       setCoverArt(savedCover);
     } else {
       setCoverArt(defaultCover);
     }
-    if (savedAudioFile) setSavedAudio(savedAudioFile);
   }, []);
 
   if (!isAuthenticated) {
@@ -296,78 +246,28 @@ const Index = () => {
       </div>
 
       {/* Track List */}
-      <div className="px-6 pb-32">
+      <div className="px-6 pb-8">
         <div className="max-w-3xl mx-auto space-y-1">
           {audioFiles.map((file, index) => (
             <div
               key={file.id}
-              className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
-                currentPlaying === file.id 
-                  ? 'bg-primary/10' 
-                  : 'hover:bg-muted/30'
-              }`}
+              className="flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer hover:bg-muted/30"
               onClick={() => playAudio(file.id)}
             >
               <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
               <div className="flex-1 min-w-0">
-                <p className={`font-medium truncate ${
-                  currentPlaying === file.id ? 'text-primary' : 'text-foreground'
-                }`}>
+                <p className="font-medium truncate text-foreground">
                   {file.name}
                 </p>
                 <p className="text-sm text-muted-foreground truncate">
                   {file.duration}
                 </p>
               </div>
-              {currentPlaying === file.id && isPlaying ? (
-                <Pause className="h-5 w-5 text-primary shrink-0" />
-              ) : (
-                <Play className="h-5 w-5 text-muted-foreground shrink-0" />
-              )}
+              <Play className="h-5 w-5 text-muted-foreground shrink-0" />
             </div>
           ))}
         </div>
       </div>
-
-      {/* Now Playing Bar */}
-      {currentPlaying && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 px-6 py-4">
-          <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              {coverArt && (
-                <img 
-                  src={coverArt} 
-                  alt="Now Playing" 
-                  className="w-12 h-12 rounded-lg object-cover"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm truncate">
-                  {audioFiles.find(f => f.id === currentPlaying)?.name}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleMute();
-                }}
-              >
-                {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Hidden audio element */}
-      <audio ref={audioRef} />
     </div>
   );
 };
