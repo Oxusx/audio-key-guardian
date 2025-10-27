@@ -3,10 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import StripePaymentForm from '@/components/StripePaymentForm';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 const Investment = () => {
   const navigate = useNavigate();
@@ -15,6 +20,8 @@ const Investment = () => {
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [totalInvested, setTotalInvested] = useState(0);
+  const [clientSecret, setClientSecret] = useState('');
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   // Get project details from localStorage
   const projectName = localStorage.getItem('projectName') || 'Music Project';
@@ -42,7 +49,7 @@ const Investment = () => {
     }
   };
 
-  const handleInvestment = async (e: React.FormEvent) => {
+  const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const investmentAmount = parseFloat(amount);
@@ -87,47 +94,24 @@ const Investment = () => {
     setIsSubmitting(true);
 
     try {
-      // Insert investment into database
-      const { error: insertError } = await supabase
-        .from('investments')
-        .insert({
-          user_email: email,
-          amount: investmentAmount,
-          project_name: projectName,
-        });
-
-      if (insertError) throw insertError;
-
-      // Call edge function to send confirmation email
-      const { error: emailError } = await supabase.functions.invoke('send-investment-confirmation', {
+      // Create payment intent
+      const { data, error } = await supabase.functions.invoke('process-investment-payment', {
         body: {
-          email,
           amount: investmentAmount,
+          email,
           projectName,
         },
       });
 
-      if (emailError) {
-        console.error('Email sending failed:', emailError);
-        // Don't fail the whole operation if email fails
-      }
+      if (error) throw error;
 
-      toast({
-        title: 'Investment Successful!',
-        description: `Thank you for investing $${investmentAmount.toLocaleString()} in ${projectName}. Check your email for confirmation.`,
-      });
-
-      // Refresh total investments
-      await fetchTotalInvestments();
-
-      // Reset form
-      setEmail('');
-      setAmount('');
+      setClientSecret(data.clientSecret);
+      setShowPaymentForm(true);
     } catch (error: any) {
-      console.error('Investment error:', error);
+      console.error('Payment setup error:', error);
       toast({
-        title: 'Investment Failed',
-        description: error.message || 'An error occurred while processing your investment.',
+        title: 'Payment Setup Failed',
+        description: error.message || 'Unable to initialize payment. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -194,66 +178,105 @@ const Investment = () => {
           </div>
         </Card>
 
-        {/* Investment Form */}
+        {/* Investment Form or Payment Form */}
         <Card className="p-6 bg-card/50 backdrop-blur-sm">
-          <h2 className="text-xl font-semibold mb-4">Make Your Investment</h2>
-          <form onSubmit={handleInvestment} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2">
-                Email Address
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your.email@example.com"
-                required
-              />
-            </div>
+          {!showPaymentForm ? (
+            <>
+              <h2 className="text-xl font-semibold mb-4">Make Your Investment</h2>
+              <form onSubmit={handleProceedToPayment} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-2">
+                    Email Address
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    required
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="amount" className="block text-sm font-medium mb-2">
-                Investment Amount ($)
-              </label>
-              <Input
-                id="amount"
-                type="number"
-                min="1"
-                max={maxInvestment}
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Enter amount"
-                required
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Maximum: ${maxInvestment.toLocaleString()}
-              </p>
-            </div>
+                <div>
+                  <label htmlFor="amount" className="block text-sm font-medium mb-2">
+                    Investment Amount ($)
+                  </label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    min="1"
+                    max={maxInvestment}
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Maximum: ${maxInvestment.toLocaleString()}
+                  </p>
+                </div>
 
-            {amount && parseFloat(amount) > 0 && (
-              <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
-                <p className="text-sm font-medium">Potential Return</p>
-                <p className="text-2xl font-bold text-success">
-                  ${potentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Based on {roiPercentage}% ROI
+                {amount && parseFloat(amount) > 0 && (
+                  <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
+                    <p className="text-sm font-medium">Potential Return</p>
+                    <p className="text-2xl font-bold text-success">
+                      ${potentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Based on {roiPercentage}% ROI
+                    </p>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  variant="gradient"
+                  size="lg"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Processing...' : 'Continue to Payment'}
+                </Button>
+              </form>
+            </>
+          ) : (
+            <>
+              <div className="mb-6">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPaymentForm(false)}
+                  className="mb-4"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Details
+                </Button>
+                <h2 className="text-xl font-semibold">Complete Your Investment</h2>
+                <p className="text-muted-foreground mt-2">
+                  Investing ${parseFloat(amount).toLocaleString()} in {projectName}
                 </p>
               </div>
-            )}
 
-            <Button
-              type="submit"
-              variant="gradient"
-              size="lg"
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Processing...' : 'Invest Now'}
-            </Button>
-          </form>
+              {clientSecret && (
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <StripePaymentForm
+                    email={email}
+                    amount={parseFloat(amount)}
+                    projectName={projectName}
+                    onSuccess={async () => {
+                      await fetchTotalInvestments();
+                      setEmail('');
+                      setAmount('');
+                      setShowPaymentForm(false);
+                      setClientSecret('');
+                    }}
+                  />
+                </Elements>
+              )}
+            </>
+          )}
         </Card>
       </div>
     </div>
