@@ -322,6 +322,15 @@ const Index = () => {
               </div>
             ))}
         </div>
+        
+        {/* Invest Button */}
+        <div className="max-w-3xl mx-auto mt-8">
+          <Link to="/investment">
+            <Button variant="gradient" size="lg" className="w-full">
+              Invest in This Project
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Mini Player Bar */}

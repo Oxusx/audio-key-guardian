@@ -1,193 +1,260 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Users, TrendingUp, Music, Calendar } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Investment = () => {
-  const [investmentAmount, setInvestmentAmount] = useState<number>(10);
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [amount, setAmount] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalInvested, setTotalInvested] = useState(0);
 
-  // Get budget from localStorage
-  const totalBudget = Number(localStorage.getItem('projectInvestmentBudget') || '0');
-  const userAvailableBudget = totalBudget * 0.5;
-  const maxUserInvestment = Math.min(userAvailableBudget * 0.1, userAvailableBudget);
+  // Get project details from localStorage
+  const projectName = localStorage.getItem('projectName') || 'Music Project';
+  const totalBudget = parseFloat(localStorage.getItem('totalBudget') || '10000');
+  const maxInvestment = totalBudget * 0.5; // 50% of budget
 
-  const handleInvestment = () => {
-    if (investmentAmount < 10) {
+  // Calculate progress percentage
+  const progressPercentage = (totalInvested / totalBudget) * 100;
+
+  // ROI calculation (example: 20% return)
+  const roiPercentage = 20;
+  const potentialReturn = (parseFloat(amount) || 0) * (1 + roiPercentage / 100);
+
+  useEffect(() => {
+    fetchTotalInvestments();
+  }, []);
+
+  const fetchTotalInvestments = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_total_investments');
+      if (error) throw error;
+      setTotalInvested(Number(data) || 0);
+    } catch (error) {
+      console.error('Error fetching total investments:', error);
+    }
+  };
+
+  const handleInvestment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const investmentAmount = parseFloat(amount);
+
+    // Validation
+    if (!email || !amount) {
       toast({
-        title: "Minimum investment required",
-        description: "Minimum investment amount is $10.",
-        variant: "destructive",
+        title: 'Missing Information',
+        description: 'Please enter both email and investment amount.',
+        variant: 'destructive',
       });
       return;
     }
 
-    if (investmentAmount > maxUserInvestment) {
+    if (investmentAmount <= 0) {
       toast({
-        title: "Investment limit exceeded",
-        description: `Maximum investment allowed is $${maxUserInvestment.toFixed(2)}.`,
-        variant: "destructive",
+        title: 'Invalid Amount',
+        description: 'Investment amount must be greater than 0.',
+        variant: 'destructive',
       });
       return;
     }
 
-    // Payment integration would go here
-    toast({
-      title: "Payment integration required",
-      description: "Please connect Supabase and Stripe to process payments.",
-    });
+    if (investmentAmount > maxInvestment) {
+      toast({
+        title: 'Amount Too High',
+        description: `Maximum investment is $${maxInvestment.toLocaleString()} (50% of budget).`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (totalInvested + investmentAmount > totalBudget) {
+      toast({
+        title: 'Budget Exceeded',
+        description: `Only $${(totalBudget - totalInvested).toLocaleString()} remaining in budget.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Insert investment into database
+      const { error: insertError } = await supabase
+        .from('investments')
+        .insert({
+          user_email: email,
+          amount: investmentAmount,
+          project_name: projectName,
+        });
+
+      if (insertError) throw insertError;
+
+      // Call edge function to send confirmation email
+      const { error: emailError } = await supabase.functions.invoke('send-investment-confirmation', {
+        body: {
+          email,
+          amount: investmentAmount,
+          projectName,
+        },
+      });
+
+      if (emailError) {
+        console.error('Email sending failed:', emailError);
+        // Don't fail the whole operation if email fails
+      }
+
+      toast({
+        title: 'Investment Successful!',
+        description: `Thank you for investing $${investmentAmount.toLocaleString()} in ${projectName}. Check your email for confirmation.`,
+      });
+
+      // Refresh total investments
+      await fetchTotalInvestments();
+
+      // Reset form
+      setEmail('');
+      setAmount('');
+    } catch (error: any) {
+      console.error('Investment error:', error);
+      toast({
+        title: 'Investment Failed',
+        description: error.message || 'An error occurred while processing your investment.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
-            <ArrowLeft className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Community Investment
-            </h1>
-            <p className="text-muted-foreground">Be part of the project's success</p>
-          </div>
+          <h1 className="text-3xl font-bold">Invest in {projectName}</h1>
         </div>
 
-        {/* Community Purpose */}
-        <Card className="shadow-elegant">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Building Together, Succeeding Together
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">
-              Welcome to our community-driven investment platform. When you invest in this project, 
-              you're not just supporting an artist—you're becoming part of a collaborative community 
-              where everyone's success is shared.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
-                <Music className="h-5 w-5 text-primary mt-1" />
-                <div>
-                  <h4 className="font-medium">Merchandise Sales</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Share in profits from exclusive merchandise and limited releases
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
-                <Calendar className="h-5 w-5 text-primary mt-1" />
-                <div>
-                  <h4 className="font-medium">Live Concert Tickets</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Benefit from ticket sales and exclusive live event opportunities
-                  </p>
-                </div>
-              </div>
+        {/* Project Info Card */}
+        <Card className="p-6 mb-6 bg-card/50 backdrop-blur-sm">
+          <h2 className="text-xl font-semibold mb-4">About This Project</h2>
+          <p className="text-muted-foreground mb-4">
+            Join us in bringing this music project to life! Your investment will help fund production,
+            marketing, and distribution. As an investor, you'll receive exclusive merchandise, concert
+            tickets, and share in the project's success.
+          </p>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Budget:</span>
+              <span className="font-semibold">${totalBudget.toLocaleString()}</span>
             </div>
-
-            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <span className="font-medium text-primary">Community Success Model</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                When the artist succeeds, the community succeeds. Your investment creates a 
-                collaborative ecosystem where every member has a stake in the project's growth 
-                and shares in its achievements.
-              </p>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Expected ROI:</span>
+              <span className="font-semibold text-success">{roiPercentage}%</span>
             </div>
-          </CardContent>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Max Investment:</span>
+              <span className="font-semibold">${maxInvestment.toLocaleString()}</span>
+            </div>
+          </div>
         </Card>
 
-        {/* Investment Details */}
-        {totalBudget > 0 ? (
-          <Card className="shadow-elegant">
-            <CardHeader>
-              <CardTitle>Investment Opportunity</CardTitle>
-              <CardDescription>
-                Join the community by investing in this project's future
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Budget Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-2xl font-bold text-primary">${totalBudget.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Total Budget</p>
-                </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-2xl font-bold text-success">${(totalBudget * 0.5).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Admin Investment (50%)</p>
-                </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-2xl font-bold text-orange-500">${userAvailableBudget.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Available for Community</p>
-                </div>
-              </div>
+        {/* Budget Progress */}
+        <Card className="p-6 mb-6 bg-card/50 backdrop-blur-sm">
+          <h2 className="text-xl font-semibold mb-4">Funding Progress</h2>
+          <div className="space-y-3">
+            <Progress value={progressPercentage} className="h-6" />
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                ${totalInvested.toLocaleString()} raised
+              </span>
+              <span className="text-muted-foreground">
+                ${totalBudget.toLocaleString()} goal
+              </span>
+            </div>
+            <p className="text-center font-semibold text-lg">
+              {progressPercentage.toFixed(1)}% Funded
+            </p>
+          </div>
+        </Card>
 
-              {/* Investment Form */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">Min: $10</Badge>
-                  <Badge variant="outline">Max: ${maxUserInvestment.toFixed(2)} (10% limit)</Badge>
-                </div>
+        {/* Investment Form */}
+        <Card className="p-6 bg-card/50 backdrop-blur-sm">
+          <h2 className="text-xl font-semibold mb-4">Make Your Investment</h2>
+          <form onSubmit={handleInvestment} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-2">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your.email@example.com"
+                required
+              />
+            </div>
 
-                <div>
-                  <Label htmlFor="investment-amount">Investment Amount ($)</Label>
-                  <Input
-                    id="investment-amount"
-                    type="number"
-                    min="10"
-                    max={maxUserInvestment}
-                    step="1"
-                    value={investmentAmount}
-                    onChange={(e) => setInvestmentAmount(Number(e.target.value))}
-                    placeholder="Enter amount"
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Between $10 and ${maxUserInvestment.toFixed(2)}
-                  </p>
-                </div>
-
-                <Button 
-                  onClick={handleInvestment}
-                  className="w-full" 
-                  variant="gradient"
-                  size="lg"
-                  disabled={investmentAmount < 10 || investmentAmount > maxUserInvestment}
-                >
-                  Invest ${investmentAmount} in Community Success
-                </Button>
-              </div>
-
-              <div className="text-center text-sm text-muted-foreground">
-                <p>💰 Secure payment processing • 🤝 Community-driven returns • 🎵 Support independent artists</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="shadow-elegant">
-            <CardContent className="text-center py-12">
-              <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Investment Not Available</h3>
-              <p className="text-muted-foreground">
-                The admin hasn't set up an investment budget yet. 
-                Please check back later when the investment opportunity is available.
+            <div>
+              <label htmlFor="amount" className="block text-sm font-medium mb-2">
+                Investment Amount ($)
+              </label>
+              <Input
+                id="amount"
+                type="number"
+                min="1"
+                max={maxInvestment}
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Enter amount"
+                required
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Maximum: ${maxInvestment.toLocaleString()}
               </p>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+
+            {amount && parseFloat(amount) > 0 && (
+              <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
+                <p className="text-sm font-medium">Potential Return</p>
+                <p className="text-2xl font-bold text-success">
+                  ${potentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Based on {roiPercentage}% ROI
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="gradient"
+              size="lg"
+              className="w-full"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Processing...' : 'Invest Now'}
+            </Button>
+          </form>
+        </Card>
       </div>
     </div>
   );

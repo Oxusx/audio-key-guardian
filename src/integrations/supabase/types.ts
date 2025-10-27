@@ -14,13 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      investments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          project_name: string
+          user_email: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          project_name: string
+          user_email: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          project_name?: string
+          user_email?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_total_investments: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never
