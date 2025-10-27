@@ -63,6 +63,8 @@ const StripePaymentForm = ({ email, amount, projectName, onSuccess }: StripePaym
       const contractTerms = `
 INVESTMENT AGREEMENT
 
+IMPORTANT LEGAL NOTICE: This is a legally binding contract. You should consult with a qualified attorney before entering into this agreement. By completing this payment, you acknowledge that you have read, understood, and agree to all terms and conditions herein.
+
 This Investment Agreement ("Agreement") is entered into as of ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} by and between:
 
 INVESTOR: ${email}
@@ -93,21 +95,62 @@ In addition to the financial return, the Investor shall receive:
    d) Updates on project progress and milestones
 
 6. RISK ACKNOWLEDGMENT
-The Investor acknowledges that all investments carry risk and that the expected return is not guaranteed. The actual return may be higher or lower than projected.
+The Investor acknowledges and agrees that:
+   a) All investments carry inherent risk and the Investment Amount may be lost in whole or in part
+   b) The expected return is a projection only and is not guaranteed
+   c) The actual return may be significantly higher or lower than projected, including total loss
+   d) The Project may fail to generate any return or revenue
+   e) There is no guarantee of project completion or success
+   f) This investment is speculative and high-risk in nature
 
-7. GOVERNING LAW
-This Agreement shall be governed by and construed in accordance with the laws of the jurisdiction in which the Project Owner operates.
+7. PROJECT FAILURE AND REFUNDS
+In the event the Project is cancelled or fails to launch:
+   a) The Project Owner will make reasonable efforts to return invested capital
+   b) The Investor understands that a full refund may not be possible
+   c) Any refunds will be distributed on a pro-rata basis to all investors
+   d) The Project Owner is not liable for investment losses due to project failure
 
-8. ENTIRE AGREEMENT
-This Agreement constitutes the entire agreement between the parties concerning the subject matter hereof and supersedes all prior agreements and understandings.
+8. DATA PROTECTION AND PRIVACY
+The parties agree to comply with all applicable data protection laws. The Investor's personal information will be used solely for the purposes of this Agreement and project communications.
 
-9. AMENDMENTS
-This Agreement may only be amended by written agreement signed by both parties.
+9. INVESTOR ELIGIBILITY
+The Investor represents and warrants that:
+   a) They are of legal age to enter into this Agreement
+   b) They have the financial capacity to bear the loss of the entire Investment Amount
+   c) They have carefully considered the risks involved
 
-10. DISPUTE RESOLUTION
-Any disputes arising under this Agreement shall be resolved through good faith negotiation, and if necessary, through binding arbitration.
+10. GOVERNING LAW
+This Agreement shall be governed by and construed in accordance with the laws of the United States and the state in which the Project Owner operates, without regard to conflict of law principles.
 
-By completing the payment, both parties acknowledge that they have read, understood, and agree to be bound by the terms and conditions of this Agreement.
+11. ENTIRE AGREEMENT
+This Agreement constitutes the entire agreement between the parties concerning the subject matter hereof and supersedes all prior agreements, understandings, negotiations, and discussions, whether oral or written.
+
+12. AMENDMENTS
+This Agreement may only be amended by written agreement signed by both parties. Any amendments must be mutually agreed upon and documented in writing.
+
+13. DISPUTE RESOLUTION
+Any disputes, claims, or controversies arising under this Agreement shall be resolved as follows:
+   a) First, through good faith negotiation between the parties within 30 days of written notice
+   b) If unresolved, through binding arbitration in accordance with the rules of the American Arbitration Association
+   c) The prevailing party in any dispute shall be entitled to reasonable attorneys' fees and costs
+   d) The Investor waives the right to participate in class action lawsuits related to this Agreement
+
+14. SEVERABILITY
+If any provision of this Agreement is held to be invalid, illegal, or unenforceable, the remaining provisions shall continue in full force and effect.
+
+15. NO WAIVER
+The failure of either party to enforce any provision of this Agreement shall not constitute a waiver of that or any other provision.
+
+ACKNOWLEDGMENT AND ACCEPTANCE
+
+By completing the payment, the Investor acknowledges that they have:
+- Read and understood this entire Agreement
+- Had the opportunity to seek independent legal advice
+- Understood the risks involved in this investment
+- Agreed to be legally bound by all terms and conditions herein
+- Confirmed their eligibility to make this investment
+
+ELECTRONIC SIGNATURE: By completing the payment transaction, both parties agree that their electronic acceptance constitutes a legally binding signature equivalent to a handwritten signature.
 
 INVESTOR: ${email}
 Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
