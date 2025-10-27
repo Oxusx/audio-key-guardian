@@ -27,6 +27,8 @@ const Index = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [coverArt, setCoverArt] = useState<string>('');
+  const [savedAudio, setSavedAudio] = useState<string>('');
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
 
@@ -216,6 +218,14 @@ const Index = () => {
     };
   }, []);
 
+  // Load saved cover art and audio
+  useEffect(() => {
+    const savedCover = localStorage.getItem('projectCoverArt');
+    const savedAudioFile = localStorage.getItem('projectAudio');
+    if (savedCover) setCoverArt(savedCover);
+    if (savedAudioFile) setSavedAudio(savedAudioFile);
+  }, []);
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background relative">
@@ -251,17 +261,6 @@ const Index = () => {
       </div>
     );
   }
-
-  // Get saved cover art and audio from localStorage
-  const [coverArt, setCoverArt] = useState<string>('');
-  const [savedAudio, setSavedAudio] = useState<string>('');
-
-  useEffect(() => {
-    const savedCover = localStorage.getItem('projectCoverArt');
-    const savedAudioFile = localStorage.getItem('projectAudio');
-    if (savedCover) setCoverArt(savedCover);
-    if (savedAudioFile) setSavedAudio(savedAudioFile);
-  }, []);
 
   return (
     <div className="min-h-screen bg-background relative">
