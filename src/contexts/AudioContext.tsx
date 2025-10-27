@@ -48,7 +48,7 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Set up audio event listeners
+  // Set up audio event listeners and MediaSession for background audio
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -69,6 +69,40 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
     // Set initial volume
     audio.volume = volume / 100;
 
+    // Set up MediaSession API for background audio controls
+    if ('mediaSession' in navigator && currentTrack) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.name,
+        artist: 'Audio Key Guardian',
+        album: 'Exclusive Tracks',
+        artwork: [
+          { src: '/favicon.ico', sizes: '96x96', type: 'image/png' },
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        audio.play();
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        audio.pause();
+      });
+
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        // Will be handled by component
+      });
+
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        // Will be handled by component
+      });
+
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime) {
+          audio.currentTime = details.seekTime;
+        }
+      });
+    }
+
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleDurationChange);
@@ -77,7 +111,7 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
     };
-  }, [volume]);
+  }, [volume, currentTrack]);
 
   const playTrack = async (track: AudioFile) => {
     if (!audioRef.current) return;
@@ -90,6 +124,18 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
       if (currentTrack?.id !== track.id) {
         audioRef.current.src = src;
         setCurrentTrack(track);
+        
+        // Update MediaSession metadata
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.name,
+            artist: 'Audio Key Guardian',
+            album: 'Exclusive Tracks',
+            artwork: [
+              { src: '/favicon.ico', sizes: '96x96', type: 'image/png' },
+            ]
+          });
+        }
       }
       
       await audioRef.current.play();
