@@ -60,6 +60,11 @@ const StripePaymentForm = ({ email, amount, projectName, onSuccess }: StripePaym
       const expectedReturn = amount * (1 + roiPercentage / 100);
       const adminEmail = 'admin@musicproject.com'; // You can configure this
       
+      // Sanitize inputs to prevent injection attacks
+      const sanitizedEmail = email.trim().substring(0, 255).replace(/[<>]/g, '');
+      const sanitizedProjectName = projectName.trim().substring(0, 100).replace(/[<>]/g, '');
+      const sanitizedAdminEmail = adminEmail.trim().substring(0, 255).replace(/[<>]/g, '');
+      
       const contractTerms = `
 INVESTMENT AGREEMENT
 
@@ -67,9 +72,9 @@ IMPORTANT LEGAL NOTICE: This is a legally binding contract. You should consult w
 
 This Investment Agreement ("Agreement") is entered into as of ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} by and between:
 
-INVESTOR: ${email}
-ADMIN/PROJECT OWNER: ${adminEmail}
-PROJECT: ${projectName}
+INVESTOR: ${sanitizedEmail}
+ADMIN/PROJECT OWNER: ${sanitizedAdminEmail}
+PROJECT: ${sanitizedProjectName}
 
 WHEREAS, the Investor wishes to invest in the Project, and the Project Owner agrees to accept such investment under the terms and conditions set forth herein.
 
@@ -152,12 +157,12 @@ By completing the payment, the Investor acknowledges that they have:
 
 ELECTRONIC SIGNATURE: By completing the payment transaction, both parties agree that their electronic acceptance constitutes a legally binding signature equivalent to a handwritten signature.
 
-INVESTOR: ${email}
+INVESTOR: ${sanitizedEmail}
 Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
 Investment Amount: $${amount.toLocaleString()}
 Expected Return: $${expectedReturn.toLocaleString()} (${roiPercentage}% ROI)
 
-PROJECT OWNER: ${adminEmail}
+PROJECT OWNER: ${sanitizedAdminEmail}
 Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
 `.trim();
 
@@ -166,9 +171,9 @@ Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long',
         .from('contracts')
         .insert({
           investment_id: investmentData.id,
-          investor_email: email,
-          admin_email: adminEmail,
-          project_name: projectName,
+          investor_email: sanitizedEmail,
+          admin_email: sanitizedAdminEmail,
+          project_name: sanitizedProjectName,
           investment_amount: amount,
           roi_percentage: roiPercentage,
           expected_return: expectedReturn,
@@ -184,9 +189,9 @@ Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long',
       // Send confirmation email with contract
       await supabase.functions.invoke('send-investment-confirmation', {
         body: {
-          email,
+          email: sanitizedEmail,
           amount,
-          projectName,
+          projectName: sanitizedProjectName,
           contractTerms,
         },
       });

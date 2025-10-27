@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -23,6 +21,14 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) {
+      console.error("RESEND_API_KEY is not configured");
+      throw new Error("Email system is not configured. Please contact the administrator.");
+    }
+
+    const resend = new Resend(resendKey);
+
     const { email, amount, projectName, contractTerms }: InvestmentConfirmationRequest = await req.json();
 
     console.log(`Sending investment confirmation to ${email} for $${amount} in ${projectName}`);

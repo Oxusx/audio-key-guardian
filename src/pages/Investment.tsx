@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, CreditCard } from 'lucide-react';
+import { ArrowLeft, CreditCard, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,7 @@ const Investment = () => {
   const [totalInvested, setTotalInvested] = useState(0);
   const [clientSecret, setClientSecret] = useState('');
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   // Get project details from localStorage
   const projectName = localStorage.getItem('projectName') || 'Music Project';
@@ -91,19 +92,41 @@ const Investment = () => {
       return;
     }
 
+    // Show legal warning before proceeding
+    setShowWarningModal(true);
+  };
+
+  const confirmProceedToPayment = async () => {
+    setShowWarningModal(false);
     setIsSubmitting(true);
 
     try {
+      const investmentAmount = parseFloat(amount);
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Sanitize inputs to prevent injection
+      const sanitizedEmail = email.trim().substring(0, 255);
+      const sanitizedProjectName = projectName.trim().substring(0, 100);
+
       // Create payment intent
       const { data, error } = await supabase.functions.invoke('process-investment-payment', {
         body: {
           amount: investmentAmount,
-          email,
-          projectName,
+          email: sanitizedEmail,
+          projectName: sanitizedProjectName,
         },
       });
 
       if (error) throw error;
+
+      if (!data?.clientSecret) {
+        throw new Error('Payment system is not configured. Please contact support.');
+      }
 
       setClientSecret(data.clientSecret);
       setShowPaymentForm(true);
@@ -278,6 +301,64 @@ const Investment = () => {
             </>
           )}
         </Card>
+
+        {/* View Contracts Link */}
+        <div className="text-center mt-6">
+          <Button
+            variant="link"
+            onClick={() => navigate('/contracts')}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            View Your Investment Contracts
+          </Button>
+        </div>
+
+        {/* Legal Warning Modal */}
+        {showWarningModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="max-w-2xl w-full p-6">
+              <h2 className="text-2xl font-bold mb-4 text-destructive">⚠️ Important Legal Notice</h2>
+              <div className="space-y-4 text-sm">
+                <p className="font-semibold">
+                  By proceeding with this investment, you acknowledge and agree to the following:
+                </p>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>This is a <strong>legally binding contract</strong> that will be generated upon payment completion</li>
+                  <li>All investments carry <strong>inherent risk</strong> and you may lose some or all of your investment</li>
+                  <li>The projected return is <strong>not guaranteed</strong> and actual returns may differ significantly</li>
+                  <li>You have the <strong>financial capacity</strong> to bear the loss of this entire investment amount</li>
+                  <li>You are <strong>legally eligible</strong> to make this investment in your jurisdiction</li>
+                  <li>You have had the <strong>opportunity to seek independent legal and financial advice</strong></li>
+                  <li>The project may fail and <strong>refunds are not guaranteed</strong></li>
+                </ul>
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mt-4">
+                  <p className="font-semibold text-destructive">Recommendation:</p>
+                  <p className="text-muted-foreground">
+                    We strongly recommend consulting with a qualified attorney and financial advisor before making this investment.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowWarningModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="gradient"
+                  onClick={confirmProceedToPayment}
+                  disabled={isSubmitting}
+                  className="flex-1"
+                >
+                  {isSubmitting ? 'Processing...' : 'I Understand, Proceed'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

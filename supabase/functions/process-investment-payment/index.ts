@@ -21,7 +21,8 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
-      throw new Error("Stripe API key not configured");
+      console.error("STRIPE_SECRET_KEY is not configured");
+      throw new Error("Payment system is not configured. Please contact the administrator.");
     }
 
     const stripe = new Stripe(stripeKey, {
