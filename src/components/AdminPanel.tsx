@@ -45,16 +45,11 @@ const AdminPanel = () => {
     const files = event.target.files;
     if (!files) return;
 
-    if (audioFiles.length + files.length > 5) {
-      toast({
-        title: "Upload limit exceeded",
-        description: "You can only upload up to 5 audio files.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const remainingSlots = 5 - audioFiles.length;
+    const filesToUpload = Math.min(files.length, remainingSlots);
+    const filesToAdd = Array.from(files).slice(0, filesToUpload);
 
-    const newFiles: AudioFile[] = Array.from(files).map(file => ({
+    const newFiles: AudioFile[] = filesToAdd.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
       file,
@@ -62,10 +57,19 @@ const AdminPanel = () => {
     }));
 
     setAudioFiles(prev => [...prev, ...newFiles]);
-    toast({
-      title: "Files uploaded successfully",
-      description: `${files.length} audio file(s) added.`,
-    });
+    
+    if (files.length > remainingSlots) {
+      toast({
+        title: "Upload limit reached",
+        description: `Only ${filesToUpload} file(s) uploaded. Maximum 5 audio files allowed.`,
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "Files uploaded successfully",
+        description: `${filesToUpload} audio file(s) added.`,
+      });
+    }
   };
 
   const handleCoverArtUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
