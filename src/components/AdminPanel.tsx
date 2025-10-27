@@ -91,15 +91,12 @@ const AdminPanel = () => {
   };
 
   const handleSaveProjectSettings = () => {
-    let savedItems = [];
-
     // Save cover art
     if (coverArt) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
         localStorage.setItem('projectCoverArt', result);
-        savedItems.push('cover art');
         
         // Save audio files as base64
         if (audioFiles.length > 0) {
@@ -120,7 +117,8 @@ const AdminPanel = () => {
 
           Promise.all(audioPromises).then((audioData) => {
             localStorage.setItem('projectAudioFiles', JSON.stringify(audioData));
-            savedItems.push('audio files');
+            
+            const savedItems = ['cover art', 'audio files'];
             
             // Save investment budget
             if (investmentBudget > 0) {
@@ -134,6 +132,8 @@ const AdminPanel = () => {
             });
           });
         } else {
+          const savedItems = ['cover art'];
+          
           // Save investment budget
           if (investmentBudget > 0) {
             localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
@@ -167,7 +167,8 @@ const AdminPanel = () => {
 
         Promise.all(audioPromises).then((audioData) => {
           localStorage.setItem('projectAudioFiles', JSON.stringify(audioData));
-          savedItems.push('audio files');
+          
+          const savedItems = ['audio files'];
           
           if (investmentBudget > 0) {
             localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
@@ -182,13 +183,12 @@ const AdminPanel = () => {
       } else {
         if (investmentBudget > 0) {
           localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
-          savedItems.push('investment budget');
+          
+          toast({
+            title: "✓ Project settings saved",
+            description: "Successfully saved: investment budget.",
+          });
         }
-
-        toast({
-          title: "✓ Project settings saved",
-          description: `Successfully saved: ${savedItems.join(', ')}.`,
-        });
       }
     }
   };

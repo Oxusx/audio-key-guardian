@@ -126,15 +126,21 @@ const Index = () => {
   };
 
   const playAudio = (fileId: string) => {
+    console.log('Playing audio, fileId:', fileId);
+    console.log('Available savedAudioFiles:', savedAudioFiles.length);
+    console.log('AudioFiles list:', audioFiles.map(f => f.id));
     const selectedTrack = audioFiles.find(f => f.id === fileId);
     if (selectedTrack) {
       setCurrentTrack(selectedTrack);
       if (audioRef.current) {
         // Find the actual audio data for this track
         const audioData = savedAudioFiles.find(f => f.id === fileId);
+        console.log('Found audio data for id', fileId, ':', audioData ? 'Yes' : 'No');
         if (audioData && audioData.data) {
+          console.log('Using uploaded audio');
           audioRef.current.src = audioData.data;
         } else {
+          console.log('Using demo audio - no saved audio found');
           // Fallback to demo audio if no uploaded file
           audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
         }
@@ -246,9 +252,11 @@ const Index = () => {
 
     // Load saved audio files
     const savedAudio = localStorage.getItem('projectAudioFiles');
+    console.log('Loading from localStorage - projectAudioFiles:', savedAudio ? 'Found' : 'Not found');
     if (savedAudio) {
       try {
         const parsedAudio = JSON.parse(savedAudio);
+        console.log('Loaded audio files:', parsedAudio);
         setSavedAudioFiles(parsedAudio);
       } catch (e) {
         console.error('Error loading saved audio:', e);
