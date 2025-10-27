@@ -24,11 +24,10 @@ const handler = async (req: Request): Promise<Response> => {
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) {
       console.error("RESEND_API_KEY is not configured");
-      throw new Error("Email system is not configured. Please contact the administrator.");
+      throw new Error("Email system is not configured. Investment recorded but confirmation email cannot be sent.");
     }
 
     const resend = new Resend(resendKey);
-
     const { email, amount, projectName, contractTerms }: InvestmentConfirmationRequest = await req.json();
 
     console.log(`Sending investment confirmation to ${email} for $${amount} in ${projectName}`);

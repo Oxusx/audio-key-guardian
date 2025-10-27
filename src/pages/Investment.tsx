@@ -132,9 +132,16 @@ const Investment = () => {
       setShowPaymentForm(true);
     } catch (error: any) {
       console.error('Payment setup error:', error);
+      
+      let errorMessage = 'Unable to initialize payment. Please try again.';
+      
+      if (error.message?.includes('not configured')) {
+        errorMessage = 'Payment system is not yet configured. Please contact support.';
+      }
+      
       toast({
         title: 'Payment Setup Failed',
-        description: error.message || 'Unable to initialize payment. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -156,6 +163,15 @@ const Investment = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-3xl font-bold">Invest in {projectName}</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/contracts')}
+            className="ml-auto"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            View Contracts
+          </Button>
         </div>
 
         {/* Project Info Card */}
@@ -298,6 +314,16 @@ const Investment = () => {
                   />
                 </Elements>
               )}
+
+              <div className="mt-6 p-4 bg-warning/10 border border-warning/20 rounded-lg">
+                <p className="text-sm text-warning font-semibold mb-2">⚠️ Legal Notice</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  By completing this payment, you are entering into a legally binding investment agreement. 
+                  This contract includes terms regarding payment, returns, risks, and dispute resolution. 
+                  We strongly recommend consulting with a qualified attorney before proceeding. 
+                  Your payment constitutes acceptance of all contract terms.
+                </p>
+              </div>
             </>
           )}
         </Card>
