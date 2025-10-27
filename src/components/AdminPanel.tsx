@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Key, Clock, Infinity, Trash2, Copy } from 'lucide-react';
+import { Upload, Key, Clock, Infinity, Trash2, Copy, Music } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface AudioFile {
   id: string;
@@ -32,6 +33,7 @@ interface AccessPassword {
 }
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [coverArt, setCoverArt] = useState<CoverArt | null>(null);
   const [passwords, setPasswords] = useState<AccessPassword[]>([]);
@@ -92,7 +94,7 @@ const AdminPanel = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        localStorage.setItem('audioCoverArt', result);
+        localStorage.setItem('projectCoverArt', result);
         savedItems.push('cover art');
         
         // Save audio files info (in real app, you'd upload to server)
@@ -114,7 +116,7 @@ const AdminPanel = () => {
 
         toast({
           title: "Project settings saved",
-          description: `Successfully saved: ${savedItems.join(', ')}. Check the user page to see your changes.`,
+          description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to see your changes.`,
         });
       };
       reader.readAsDataURL(coverArt.file);
@@ -137,7 +139,7 @@ const AdminPanel = () => {
 
       toast({
         title: "Project settings saved",
-        description: `Successfully saved: ${savedItems.join(', ')}. Check the user page to see your changes.`,
+        description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to see your changes.`,
       });
     }
   };
@@ -482,6 +484,21 @@ const AdminPanel = () => {
                 <p className="text-sm text-muted-foreground">Temporary Access</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* View Tracklist Button */}
+        <Card className="shadow-elegant">
+          <CardContent className="pt-6">
+            <Button 
+              onClick={() => navigate('/')}
+              className="w-full"
+              variant="outline"
+              size="lg"
+            >
+              <Music className="h-5 w-5 mr-2" />
+              View Tracklist
+            </Button>
           </CardContent>
         </Card>
       </div>
