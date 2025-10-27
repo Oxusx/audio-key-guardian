@@ -258,15 +258,26 @@ const Investment = () => {
                 </div>
 
                 {amount && parseFloat(amount) > 0 && (
-                  <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
-                    <p className="text-sm font-medium">Potential Return</p>
-                    <p className="text-2xl font-bold text-success">
-                      ${potentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Based on {roiPercentage}% ROI
-                    </p>
-                  </div>
+                  <>
+                    <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
+                      <p className="text-sm font-medium">Potential Return</p>
+                      <p className="text-2xl font-bold text-success">
+                        ${potentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Based on {roiPercentage}% ROI
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-sm">
+                      <p className="font-semibold mb-2">⚠️ Important Legal Notice</p>
+                      <p className="text-muted-foreground">
+                        By proceeding, you acknowledge this is a legally binding investment contract. 
+                        All investments carry risk, and you may lose your entire investment. 
+                        The expected return is not guaranteed. Please consult with a lawyer before proceeding.
+                      </p>
+                    </div>
+                  </>
                 )}
 
                 <Button
@@ -313,6 +324,14 @@ const Investment = () => {
                     }}
                   />
                 </Elements>
+              )}
+
+              {!clientSecret && (
+                <div className="p-6 bg-muted/50 rounded-lg text-center">
+                  <p className="text-muted-foreground">
+                    Payment configuration is pending. Please contact the administrator to complete the payment setup.
+                  </p>
+                </div>
               )}
 
               <div className="mt-6 p-4 bg-warning/10 border border-warning/20 rounded-lg">
