@@ -234,50 +234,23 @@ const Index = () => {
 
         {/* Main Password Entry */}
         <div className="min-h-screen flex items-center justify-center p-6">
-          <Card className="w-full max-w-md shadow-elegant">
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <Lock className="h-8 w-8 text-primary" />
-                </div>
-              </div>
-              <CardTitle className="text-3xl bg-gradient-primary bg-clip-text text-transparent">
-                Enter Access Key
-              </CardTitle>
-              <CardDescription>
-                Please enter your password to access the audio library
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="password">Access Password</Label>
-                  <Input
-                    id="password"
-                    type="text"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your access key"
-                    className="mt-2 text-center text-lg font-mono tracking-wider"
-                    autoComplete="off"
-                    autoFocus
-                  />
-                </div>
+          <Card className="w-full max-w-md shadow-glow border-primary/20">
+            <CardContent className="pt-12 pb-12">
+              <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                <Input
+                  id="password"
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="KEY"
+                  className="text-center text-2xl font-mono tracking-widest h-16 bg-background/50 border-primary/30 focus:border-primary"
+                  autoComplete="off"
+                  autoFocus
+                />
                 <Button type="submit" className="w-full" variant="gradient" size="lg">
-                  <Unlock className="h-4 w-4 mr-2" />
-                  Access Audio Library
+                  <Unlock className="h-5 w-5" />
                 </Button>
               </form>
-              
-              {/* Demo passwords info */}
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground text-center mb-2">Demo Access Keys:</p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <p><code className="bg-background px-2 py-1 rounded font-mono">DEMO24H</code> - 24 hour access</p>
-                  <p><code className="bg-background px-2 py-1 rounded font-mono">DEMO48H</code> - 48 hour access</p>
-                  <p><code className="bg-background px-2 py-1 rounded font-mono">DEMOINF</code> - Indefinite access</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
