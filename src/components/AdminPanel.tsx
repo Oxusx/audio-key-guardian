@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, Key, Clock, Infinity, Trash2, Copy, Music } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import localforage from 'localforage';
 
 interface AudioFile {
   id: string;
@@ -90,106 +91,55 @@ const AdminPanel = () => {
     });
   };
 
-  const handleSaveProjectSettings = () => {
-    // Save cover art
-    if (coverArt) {
+  const fileToDataURL = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        localStorage.setItem('projectCoverArt', result);
-        
-        // Save audio files as base64
-        if (audioFiles.length > 0) {
-          const audioPromises = audioFiles.map((file) => {
-            return new Promise((resolve) => {
-              const audioReader = new FileReader();
-              audioReader.onload = (audioEvent) => {
-                resolve({
-                  id: file.id,
-                  name: file.name,
-                  uploadDate: file.uploadDate,
-                  data: audioEvent.target?.result as string
-                });
-              };
-              audioReader.readAsDataURL(file.file);
-            });
-          });
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-          Promise.all(audioPromises).then((audioData) => {
-            localStorage.setItem('projectAudioFiles', JSON.stringify(audioData));
-            
-            const savedItems = ['cover art', 'audio files'];
-            
-            // Save investment budget
-            if (investmentBudget > 0) {
-              localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
-              savedItems.push('investment budget');
-            }
+  const handleSaveProjectSettings = async () => {
+    try {
+      const savedItems: string[] = [];
 
-            toast({
-              title: "✓ Project settings saved",
-              description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to hear your tracks.`,
-            });
-          });
-        } else {
-          const savedItems = ['cover art'];
-          
-          // Save investment budget
-          if (investmentBudget > 0) {
-            localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
-            savedItems.push('investment budget');
-          }
-
-          toast({
-            title: "✓ Project settings saved",
-            description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to see your changes.`,
-          });
-        }
-      };
-      reader.readAsDataURL(coverArt.file);
-    } else {
-      // Save without cover art
-      if (audioFiles.length > 0) {
-        const audioPromises = audioFiles.map((file) => {
-          return new Promise((resolve) => {
-            const audioReader = new FileReader();
-            audioReader.onload = (audioEvent) => {
-              resolve({
-                id: file.id,
-                name: file.name,
-                uploadDate: file.uploadDate,
-                data: audioEvent.target?.result as string
-              });
-            };
-            audioReader.readAsDataURL(file.file);
-          });
-        });
-
-        Promise.all(audioPromises).then((audioData) => {
-          localStorage.setItem('projectAudioFiles', JSON.stringify(audioData));
-          
-          const savedItems = ['audio files'];
-          
-          if (investmentBudget > 0) {
-            localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
-            savedItems.push('investment budget');
-          }
-
-          toast({
-            title: "✓ Project settings saved",
-            description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to hear your tracks.`,
-          });
-        });
-      } else {
-        if (investmentBudget > 0) {
-          localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
-          
-          toast({
-            title: "✓ Project settings saved",
-            description: "Successfully saved: investment budget.",
-          });
-        }
+      // Save cover art to IndexedDB (localforage)
+      if (coverArt) {
+        const coverDataUrl = await fileToDataURL(coverArt.file);
+        await localforage.setItem('projectCoverArt', coverDataUrl);
+        savedItems.push('cover art');
       }
+
+      // Save audio files to IndexedDB, store only metadata in localStorage
+      if (audioFiles.length > 0) {
+        const metadata = audioFiles.map((f) => ({ id: f.id, name: f.name }));
+        await Promise.all(
+          audioFiles.map(async (f) => {
+            const dataUrl = await fileToDataURL(f.file);
+            await localforage.setItem(`audio:${f.id}`, dataUrl);
+          })
+        );
+        localStorage.setItem('projectAudioFiles', JSON.stringify(metadata));
+        savedItems.push('audio files');
+      }
+
+      // Save investment budget (small value OK in localStorage)
+      if (investmentBudget > 0) {
+        localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
+        savedItems.push('investment budget');
+      }
+
+      toast({
+        title: "✓ Project settings saved",
+        description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to hear your tracks.`,
+      });
+    } catch (err) {
+      console.error('Error saving project settings', err);
+      toast({
+        title: 'Save failed',
+        description: 'Storage is full or blocked. Try saving fewer or smaller files.',
+        variant: 'destructive',
+      });
     }
   };
 

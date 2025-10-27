@@ -5,6 +5,7 @@ import { Play, Volume2, Settings, Unlock, Pause, SkipForward } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import defaultCover from '@/assets/cover-art.jpeg';
+import localforage from 'localforage';
 
 interface AudioFile {
   id: string;
@@ -125,28 +126,32 @@ const Index = () => {
     }
   };
 
-  const playAudio = (fileId: string) => {
+  const playAudio = async (fileId: string) => {
     console.log('Playing audio, fileId:', fileId);
     console.log('Available savedAudioFiles:', savedAudioFiles.length);
     console.log('AudioFiles list:', audioFiles.map(f => f.id));
     const selectedTrack = audioFiles.find(f => f.id === fileId);
-    if (selectedTrack) {
-      setCurrentTrack(selectedTrack);
-      if (audioRef.current) {
-        // Find the actual audio data for this track
-        const audioData = savedAudioFiles.find(f => f.id === fileId);
-        console.log('Found audio data for id', fileId, ':', audioData ? 'Yes' : 'No');
-        if (audioData && audioData.data) {
-          console.log('Using uploaded audio');
-          audioRef.current.src = audioData.data;
-        } else {
-          console.log('Using demo audio - no saved audio found');
-          // Fallback to demo audio if no uploaded file
-          audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
-        }
-        audioRef.current.play();
-        setIsPlaying(true);
+    if (!selectedTrack) return;
+    setCurrentTrack(selectedTrack);
+    if (!audioRef.current) return;
+
+    try {
+      // Try to load from IndexedDB via localforage
+      let src: string | null = null;
+      const stored = await localforage.getItem<string>(`audio:${fileId}`);
+      if (stored) {
+        console.log('Using uploaded audio from IndexedDB');
+        src = stored;
+      } else {
+        console.log('Using demo audio - no saved audio found');
+        src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
       }
+      audioRef.current.src = src;
+      await audioRef.current.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.error('Error playing audio', err);
+      toast({ title: 'Playback error', description: 'Could not start audio playback.', variant: 'destructive' });
     }
   };
 
@@ -176,22 +181,18 @@ const Index = () => {
     }
   };
 
-  const skipToNext = () => {
+  const skipToNext = async () => {
     if (!currentTrack) return;
     const currentIndex = audioFiles.findIndex(t => t.id === currentTrack.id);
     const nextIndex = currentIndex < audioFiles.length - 1 ? currentIndex + 1 : 0;
     const nextTrack = audioFiles[nextIndex];
     setCurrentTrack(nextTrack);
-    if (audioRef.current) {
-      const audioData = savedAudioFiles.find(f => f.id === nextTrack.id);
-      if (audioData && audioData.data) {
-        audioRef.current.src = audioData.data;
-      } else {
-        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
-      }
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
+    if (!audioRef.current) return;
+
+    const stored = await localforage.getItem<string>(`audio:${nextTrack.id}`);
+    audioRef.current.src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+    await audioRef.current.play();
+    setIsPlaying(true);
   };
 
   const logout = () => {
@@ -241,27 +242,38 @@ const Index = () => {
     return () => clearInterval(interval);
   }, [accessInfo]);
 
-  // Load saved cover art
+  // Load saved cover art and audio metadata
   useEffect(() => {
-    const savedCover = localStorage.getItem('projectCoverArt');
-    if (savedCover) {
-      setCoverArt(savedCover);
-    } else {
-      setCoverArt(defaultCover);
-    }
-
-    // Load saved audio files
-    const savedAudio = localStorage.getItem('projectAudioFiles');
-    console.log('Loading from localStorage - projectAudioFiles:', savedAudio ? 'Found' : 'Not found');
-    if (savedAudio) {
+    (async () => {
       try {
-        const parsedAudio = JSON.parse(savedAudio);
-        console.log('Loaded audio files:', parsedAudio);
-        setSavedAudioFiles(parsedAudio);
-      } catch (e) {
-        console.error('Error loading saved audio:', e);
+        const savedCover = localStorage.getItem('projectCoverArt');
+        if (savedCover) {
+          setCoverArt(savedCover);
+        } else {
+          const coverFromDB = await localforage.getItem<string>('projectCoverArt');
+          if (coverFromDB) {
+            setCoverArt(coverFromDB);
+          } else {
+            setCoverArt(defaultCover);
+          }
+        }
+
+        // Load saved audio metadata (ids and names)
+        const savedAudio = localStorage.getItem('projectAudioFiles');
+        console.log('Loading from localStorage - projectAudioFiles:', savedAudio ? 'Found' : 'Not found');
+        if (savedAudio) {
+          try {
+            const parsedAudio = JSON.parse(savedAudio);
+            console.log('Loaded audio files metadata:', parsedAudio);
+            setSavedAudioFiles(parsedAudio);
+          } catch (e) {
+            console.error('Error loading saved audio metadata:', e);
+          }
+        }
+      } catch (err) {
+        console.error('Error initializing media from storage:', err);
       }
-    }
+    })();
   }, []);
 
   if (!isAuthenticated) {
