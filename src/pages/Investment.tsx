@@ -176,12 +176,23 @@ const Investment = () => {
 
         {/* Project Info Card */}
         <Card className="p-6 mb-6 bg-card/50 backdrop-blur-sm">
-          <h2 className="text-xl font-semibold mb-4">About This Project</h2>
+          <h2 className="text-xl font-semibold mb-4">About This Platform</h2>
           <p className="text-muted-foreground mb-4">
-            Join us in bringing this music project to life! Your investment will help fund production,
-            marketing, and distribution. As an investor, you'll receive exclusive merchandise, concert
-            tickets, and share in the project's success.
+            Experience music while supporting artists who deserve a chance outside traditional record deals. 
+            Your investment funds production, marketing, and distribution—helping bring their vision to life. 
+            As a listener-investor, you earn returns while enjoying exclusive content from your favorite artists.
           </p>
+          <p className="text-muted-foreground mb-4">
+            This is accessible music investment: support emerging talent, generate income as you listen, 
+            and be part of the journey from studio to success.
+          </p>
+          <div className="p-3 bg-muted/50 rounded-lg border border-border">
+            <p className="text-sm font-medium mb-1">⚠️ Important: Masters Excluded</p>
+            <p className="text-xs text-muted-foreground">
+              Your investment does NOT include ownership of music masters or publishing rights. 
+              Those remain with the artist for future negotiations. Your return comes from the agreed ROI percentage only.
+            </p>
+          </div>
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Budget:</span>

@@ -90,7 +90,17 @@ The Project Owner agrees to provide the Investor with a return of ${roiPercentag
 The return on investment shall be paid to the Investor within 12 months from the date of this Agreement, unless otherwise agreed upon in writing by both parties.
 
 4. PROJECT DETAILS
-The Investment Amount will be used for the production, marketing, and distribution of the music project titled "${projectName}".
+The Investment Amount will be used for the production, marketing, and distribution of the music project titled "${sanitizedProjectName}".
+
+IMPORTANT: MASTERS AND MUSIC RIGHTS EXCLUSION
+The Investor acknowledges and explicitly agrees that this investment does NOT include, convey, or transfer any ownership, rights, title, or interest in:
+   a) The master recordings of any music produced under this Project
+   b) Publishing rights, mechanical rights, or performance rights
+   c) Copyright ownership or co-ownership of any musical compositions
+   d) Future royalties from master recordings or publishing
+   e) Any intellectual property rights related to the music or recordings
+
+The masters and all associated music rights shall remain the sole and exclusive property of the Artist/Project Owner. This investment is solely for the purpose of funding project production, marketing, and distribution costs. The Investor's return is limited to the ROI percentage specified in Section 2, and does not entitle the Investor to any ongoing royalties, rights, or claims to the music masters or intellectual property.
 
 5. INVESTOR BENEFITS
 In addition to the financial return, the Investor shall receive:

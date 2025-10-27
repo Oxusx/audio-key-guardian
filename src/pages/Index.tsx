@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Volume2, Settings, Unlock, Pause, SkipForward } from 'lucide-react';
+import { Play, Volume2, Settings, Unlock, Pause, SkipForward, Key } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAudio } from '@/contexts/AudioContext';
@@ -242,6 +242,12 @@ const Index = () => {
               <Settings className="h-4 w-4" />
             </Button>
           </Link>
+          <Link to="/artist-keys">
+            <Button variant="outline" size="sm">
+              <Key className="h-4 w-4 mr-2" />
+              Artist Keys
+            </Button>
+          </Link>
         </div>
 
         {/* Main Password Entry */}
@@ -275,6 +281,12 @@ const Index = () => {
         <Link to="/admin">
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Settings className="h-4 w-4" />
+          </Button>
+        </Link>
+        <Link to="/artist-keys" className="ml-2">
+          <Button variant="outline" size="sm">
+            <Key className="h-4 w-4 mr-2" />
+            Artist Keys
           </Button>
         </Link>
       </div>
