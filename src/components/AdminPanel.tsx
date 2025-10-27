@@ -97,50 +97,95 @@ const AdminPanel = () => {
         localStorage.setItem('projectCoverArt', result);
         savedItems.push('cover art');
         
-        // Save audio files info (in real app, you'd upload to server)
+        // Save audio files as base64
         if (audioFiles.length > 0) {
-          const audioInfo = audioFiles.map(file => ({
-            id: file.id,
-            name: file.name,
-            uploadDate: file.uploadDate
-          }));
-          localStorage.setItem('audioFilesInfo', JSON.stringify(audioInfo));
-          savedItems.push('audio files');
+          const audioPromises = audioFiles.map((file) => {
+            return new Promise((resolve) => {
+              const audioReader = new FileReader();
+              audioReader.onload = (audioEvent) => {
+                resolve({
+                  id: file.id,
+                  name: file.name,
+                  uploadDate: file.uploadDate,
+                  data: audioEvent.target?.result as string
+                });
+              };
+              audioReader.readAsDataURL(file.file);
+            });
+          });
+
+          Promise.all(audioPromises).then((audioData) => {
+            localStorage.setItem('projectAudioFiles', JSON.stringify(audioData));
+            savedItems.push('audio files');
+            
+            // Save investment budget
+            if (investmentBudget > 0) {
+              localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
+              savedItems.push('investment budget');
+            }
+
+            toast({
+              title: "✓ Project settings saved",
+              description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to hear your tracks.`,
+            });
+          });
+        } else {
+          // Save investment budget
+          if (investmentBudget > 0) {
+            localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
+            savedItems.push('investment budget');
+          }
+
+          toast({
+            title: "✓ Project settings saved",
+            description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to see your changes.`,
+          });
         }
-        
-        // Save investment budget
+      };
+      reader.readAsDataURL(coverArt.file);
+    } else {
+      // Save without cover art
+      if (audioFiles.length > 0) {
+        const audioPromises = audioFiles.map((file) => {
+          return new Promise((resolve) => {
+            const audioReader = new FileReader();
+            audioReader.onload = (audioEvent) => {
+              resolve({
+                id: file.id,
+                name: file.name,
+                uploadDate: file.uploadDate,
+                data: audioEvent.target?.result as string
+              });
+            };
+            audioReader.readAsDataURL(file.file);
+          });
+        });
+
+        Promise.all(audioPromises).then((audioData) => {
+          localStorage.setItem('projectAudioFiles', JSON.stringify(audioData));
+          savedItems.push('audio files');
+          
+          if (investmentBudget > 0) {
+            localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
+            savedItems.push('investment budget');
+          }
+
+          toast({
+            title: "✓ Project settings saved",
+            description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to hear your tracks.`,
+          });
+        });
+      } else {
         if (investmentBudget > 0) {
           localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
           savedItems.push('investment budget');
         }
 
         toast({
-          title: "Project settings saved",
-          description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to see your changes.`,
+          title: "✓ Project settings saved",
+          description: `Successfully saved: ${savedItems.join(', ')}.`,
         });
-      };
-      reader.readAsDataURL(coverArt.file);
-    } else {
-      // Save without cover art
-      if (audioFiles.length > 0) {
-        const audioInfo = audioFiles.map(file => ({
-          id: file.id,
-          name: file.name,
-          uploadDate: file.uploadDate
-        }));
-        localStorage.setItem('audioFilesInfo', JSON.stringify(audioInfo));
-        savedItems.push('audio files');
       }
-      
-      if (investmentBudget > 0) {
-        localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
-        savedItems.push('investment budget');
-      }
-
-      toast({
-        title: "Project settings saved",
-        description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to see your changes.`,
-      });
     }
   };
 

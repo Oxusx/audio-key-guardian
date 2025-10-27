@@ -15,7 +15,7 @@ interface AudioFile {
 const Player = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { track, allTracks, isPlaying: initialIsPlaying } = location.state || {};
+  const { track, allTracks, isPlaying: initialIsPlaying, audioData, allAudioData } = location.state || {};
   
   const [isPlaying, setIsPlaying] = useState(initialIsPlaying || false);
   const [isMuted, setIsMuted] = useState(false);
@@ -26,6 +26,7 @@ const Player = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [swipeDistance, setSwipeDistance] = useState(0);
+  const [currentTrack, setCurrentTrack] = useState(track);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Minimum swipe distance (in px) to trigger navigation
@@ -63,11 +64,53 @@ const Player = () => {
   // Auto-play when component mounts if was playing
   useEffect(() => {
     if (audioRef.current && initialIsPlaying) {
-      audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      if (audioData && audioData.data) {
+        audioRef.current.src = audioData.data;
+      } else {
+        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      }
       audioRef.current.play();
       setIsPlaying(true);
     }
-  }, [initialIsPlaying]);
+  }, [initialIsPlaying, audioData]);
+
+  const handlePrevious = () => {
+    if (!allTracks || !currentTrack) return;
+    const currentIndex = allTracks.findIndex((t: AudioFile) => t.id === currentTrack.id);
+    const previousIndex = currentIndex > 0 ? currentIndex - 1 : allTracks.length - 1;
+    const previousTrack = allTracks[previousIndex];
+    setCurrentTrack(previousTrack);
+    
+    if (audioRef.current) {
+      const prevAudioData = allAudioData?.find((a: any) => a.id === previousTrack.id);
+      if (prevAudioData && prevAudioData.data) {
+        audioRef.current.src = prevAudioData.data;
+      } else {
+        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      }
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const handleNext = () => {
+    if (!allTracks || !currentTrack) return;
+    const currentIndex = allTracks.findIndex((t: AudioFile) => t.id === currentTrack.id);
+    const nextIndex = currentIndex < allTracks.length - 1 ? currentIndex + 1 : 0;
+    const nextTrack = allTracks[nextIndex];
+    setCurrentTrack(nextTrack);
+    
+    if (audioRef.current) {
+      const nextAudioData = allAudioData?.find((a: any) => a.id === nextTrack.id);
+      if (nextAudioData && nextAudioData.data) {
+        audioRef.current.src = nextAudioData.data;
+      } else {
+        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      }
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -106,28 +149,6 @@ const Player = () => {
     if (audioRef.current) {
       audioRef.current.currentTime = newTime;
     }
-  };
-
-  const handlePrevious = () => {
-    if (!allTracks || !track) return;
-    const currentIndex = allTracks.findIndex((t: AudioFile) => t.id === track.id);
-    const previousIndex = currentIndex > 0 ? currentIndex - 1 : allTracks.length - 1;
-    const previousTrack = allTracks[previousIndex];
-    navigate('/player', { 
-      state: { track: previousTrack, allTracks },
-      replace: true 
-    });
-  };
-
-  const handleNext = () => {
-    if (!allTracks || !track) return;
-    const currentIndex = allTracks.findIndex((t: AudioFile) => t.id === track.id);
-    const nextIndex = currentIndex < allTracks.length - 1 ? currentIndex + 1 : 0;
-    const nextTrack = allTracks[nextIndex];
-    navigate('/player', { 
-      state: { track: nextTrack, allTracks },
-      replace: true 
-    });
   };
 
   const formatTime = (time: number) => {
@@ -178,7 +199,7 @@ const Player = () => {
     setSwipeDistance(0);
   };
 
-  if (!track) {
+  if (!currentTrack) {
     navigate('/');
     return null;
   }
@@ -227,10 +248,10 @@ const Player = () => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-foreground truncate mb-1">
-              {track.name}
+              {currentTrack.name}
             </h1>
             <p className="text-lg text-muted-foreground truncate">
-              {track.duration} • {track.size}
+              {currentTrack.duration} • {currentTrack.size}
             </p>
           </div>
         </div>

@@ -27,17 +27,27 @@ const Index = () => {
   const [coverArt, setCoverArt] = useState<string>('');
   const [currentTrack, setCurrentTrack] = useState<AudioFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [savedAudioFiles, setSavedAudioFiles] = useState<any[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
 
-  // Mock audio files - in real app, these would come from the server
-  const audioFiles: AudioFile[] = [
+  // Mock audio files - will be replaced by uploaded files if available
+  const defaultAudioFiles: AudioFile[] = [
     { id: '1', name: 'Track 1.wav', duration: '3:45', size: '8.2 MB' },
     { id: '2', name: 'Track 2.wav', duration: '4:12', size: '9.1 MB' },
     { id: '3', name: 'Track 3.wav', duration: '2:58', size: '6.8 MB' },
     { id: '4', name: 'Track 4.wav', duration: '5:23', size: '11.4 MB' },
     { id: '5', name: 'Track 5.wav', duration: '3:17', size: '7.5 MB' },
   ];
+
+  const audioFiles = savedAudioFiles.length > 0 
+    ? savedAudioFiles.map((file, index) => ({
+        id: file.id,
+        name: file.name,
+        duration: '0:00', // Will be calculated when loaded
+        size: 'Uploaded'
+      }))
+    : defaultAudioFiles;
 
   // Mock password validation - in real app, this would be server-side
   const validatePassword = (inputPassword: string) => {
@@ -120,7 +130,14 @@ const Index = () => {
     if (selectedTrack) {
       setCurrentTrack(selectedTrack);
       if (audioRef.current) {
-        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+        // Find the actual audio data for this track
+        const audioData = savedAudioFiles.find(f => f.id === fileId);
+        if (audioData && audioData.data) {
+          audioRef.current.src = audioData.data;
+        } else {
+          // Fallback to demo audio if no uploaded file
+          audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+        }
         audioRef.current.play();
         setIsPlaying(true);
       }
@@ -140,11 +157,14 @@ const Index = () => {
 
   const openFullPlayer = () => {
     if (currentTrack) {
+      const audioData = savedAudioFiles.find(f => f.id === currentTrack.id);
       navigate('/player', { 
         state: { 
           track: currentTrack,
           allTracks: audioFiles,
-          isPlaying: isPlaying
+          isPlaying: isPlaying,
+          audioData: audioData,
+          allAudioData: savedAudioFiles
         } 
       });
     }
@@ -157,7 +177,12 @@ const Index = () => {
     const nextTrack = audioFiles[nextIndex];
     setCurrentTrack(nextTrack);
     if (audioRef.current) {
-      audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      const audioData = savedAudioFiles.find(f => f.id === nextTrack.id);
+      if (audioData && audioData.data) {
+        audioRef.current.src = audioData.data;
+      } else {
+        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      }
       audioRef.current.play();
       setIsPlaying(true);
     }
@@ -217,6 +242,17 @@ const Index = () => {
       setCoverArt(savedCover);
     } else {
       setCoverArt(defaultCover);
+    }
+
+    // Load saved audio files
+    const savedAudio = localStorage.getItem('projectAudioFiles');
+    if (savedAudio) {
+      try {
+        const parsedAudio = JSON.parse(savedAudio);
+        setSavedAudioFiles(parsedAudio);
+      } catch (e) {
+        console.error('Error loading saved audio:', e);
+      }
     }
   }, []);
 
