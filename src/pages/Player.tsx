@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, MoreHorizontal, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Slider } from '@/components/ui/slider';
+import { useAudio } from '@/contexts/AudioContext';
 import defaultCover from '@/assets/cover-art.jpeg';
 import localforage from 'localforage';
 
@@ -16,19 +17,13 @@ interface AudioFile {
 const Player = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { track, allTracks, isPlaying: initialIsPlaying, audioData, allAudioData } = location.state || {};
+  const audio = useAudio();
+  const { allTracks } = location.state || {};
   
-  const [isPlaying, setIsPlaying] = useState(initialIsPlaying || false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(75);
   const [coverArt, setCoverArt] = useState<string>(defaultCover);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [swipeDistance, setSwipeDistance] = useState(0);
-  const [currentTrack, setCurrentTrack] = useState(track);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 150;
@@ -51,120 +46,14 @@ const Player = () => {
     })();
   }, []);
 
-  // Audio event handlers
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
-    const handleEnded = () => {
-      setIsPlaying(false);
-      handleNext();
-    };
-
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, []);
-
-  // Auto-play when component mounts if was playing
-  useEffect(() => {
-    (async () => {
-      if (audioRef.current && initialIsPlaying && currentTrack) {
-        try {
-          const stored = await localforage.getItem<string>(`audio:${currentTrack.id}`);
-          audioRef.current.src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
-          await audioRef.current.play();
-          setIsPlaying(true);
-        } catch (err) {
-          console.error('Error auto-playing audio:', err);
-        }
-      }
-    })();
-  }, [initialIsPlaying, currentTrack]);
-
   const handlePrevious = async () => {
-    if (!allTracks || !currentTrack) return;
-    const currentIndex = allTracks.findIndex((t: AudioFile) => t.id === currentTrack.id);
-    const previousIndex = currentIndex > 0 ? currentIndex - 1 : allTracks.length - 1;
-    const previousTrack = allTracks[previousIndex];
-    setCurrentTrack(previousTrack);
-    
-    if (audioRef.current) {
-      try {
-        const stored = await localforage.getItem<string>(`audio:${previousTrack.id}`);
-        audioRef.current.src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
-        await audioRef.current.play();
-        setIsPlaying(true);
-      } catch (err) {
-        console.error('Error playing previous track:', err);
-      }
-    }
+    if (!allTracks) return;
+    await audio.skipToPrevious(allTracks);
   };
 
   const handleNext = async () => {
-    if (!allTracks || !currentTrack) return;
-    const currentIndex = allTracks.findIndex((t: AudioFile) => t.id === currentTrack.id);
-    const nextIndex = currentIndex < allTracks.length - 1 ? currentIndex + 1 : 0;
-    const nextTrack = allTracks[nextIndex];
-    setCurrentTrack(nextTrack);
-    
-    if (audioRef.current) {
-      try {
-        const stored = await localforage.getItem<string>(`audio:${nextTrack.id}`);
-        audioRef.current.src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
-        await audioRef.current.play();
-        setIsPlaying(true);
-      } catch (err) {
-        console.error('Error playing next track:', err);
-      }
-    }
-  };
-
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const handleVolumeChange = (value: number[]) => {
-    const newVolume = value[0];
-    setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume / 100;
-      if (newVolume === 0) {
-        setIsMuted(true);
-      } else if (isMuted) {
-        setIsMuted(false);
-      }
-    }
-  };
-
-  const handleSeek = (value: number[]) => {
-    const newTime = value[0];
-    setCurrentTime(newTime);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-    }
+    if (!allTracks) return;
+    await audio.skipToNext(allTracks);
   };
 
   const formatTime = (time: number) => {
@@ -176,7 +65,7 @@ const Player = () => {
 
   const formatTimeRemaining = (time: number) => {
     if (isNaN(time)) return '-0:00';
-    const remaining = duration - time;
+    const remaining = audio.duration - time;
     const minutes = Math.floor(remaining / 60);
     const seconds = Math.floor(remaining % 60);
     return `-${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -215,7 +104,7 @@ const Player = () => {
     setSwipeDistance(0);
   };
 
-  if (!currentTrack) {
+  if (!audio.currentTrack) {
     navigate('/');
     return null;
   }
@@ -264,10 +153,10 @@ const Player = () => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-foreground truncate mb-1">
-              {currentTrack.name}
+              {audio.currentTrack.name}
             </h1>
             <p className="text-lg text-muted-foreground truncate">
-              {currentTrack.duration} • {currentTrack.size}
+              {audio.currentTrack.duration} • {audio.currentTrack.size}
             </p>
           </div>
         </div>
@@ -276,15 +165,15 @@ const Player = () => {
       {/* Progress Bar */}
       <div className="px-8 pb-2">
         <Slider
-          value={[currentTime]}
-          max={duration || 100}
+          value={[audio.currentTime]}
+          max={audio.duration || 100}
           step={0.1}
-          onValueChange={handleSeek}
+          onValueChange={(val) => audio.seekTo(val[0])}
           className="w-full"
         />
         <div className="flex justify-between text-xs text-muted-foreground mt-1">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTimeRemaining(currentTime)}</span>
+          <span>{formatTime(audio.currentTime)}</span>
+          <span>{formatTimeRemaining(audio.currentTime)}</span>
         </div>
       </div>
 
@@ -303,10 +192,10 @@ const Player = () => {
           <Button
             variant="ghost"
             size="lg"
-            onClick={togglePlay}
+            onClick={audio.togglePlayPause}
             className="h-20 w-20"
           >
-            {isPlaying ? (
+            {audio.isPlaying ? (
               <Pause className="h-14 w-14" fill="currentColor" />
             ) : (
               <Play className="h-14 w-14" fill="currentColor" />
@@ -330,19 +219,19 @@ const Player = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={toggleMute}
+            onClick={audio.toggleMute}
           >
-            {isMuted || volume === 0 ? (
+            {audio.isMuted || audio.volume === 0 ? (
               <VolumeX className="h-5 w-5" />
             ) : (
               <Volume2 className="h-5 w-5" />
             )}
           </Button>
           <Slider
-            value={[isMuted ? 0 : volume]}
+            value={[audio.isMuted ? 0 : audio.volume]}
             max={100}
             step={1}
-            onValueChange={handleVolumeChange}
+            onValueChange={(val) => audio.setVolume(val[0])}
             className="flex-1"
           />
           <Button
@@ -353,9 +242,6 @@ const Player = () => {
           </Button>
         </div>
       </div>
-
-      {/* Hidden audio element */}
-      <audio ref={audioRef} />
     </div>
   );
 };

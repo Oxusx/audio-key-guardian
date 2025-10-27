@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Play, Volume2, Settings, Unlock, Pause, SkipForward } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAudio } from '@/contexts/AudioContext';
 import defaultCover from '@/assets/cover-art.jpeg';
 import localforage from 'localforage';
 
@@ -22,14 +23,12 @@ interface AccessInfo {
 
 const Index = () => {
   const navigate = useNavigate();
+  const audio = useAudio();
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessInfo, setAccessInfo] = useState<AccessInfo | null>(null);
   const [coverArt, setCoverArt] = useState<string>('');
-  const [currentTrack, setCurrentTrack] = useState<AudioFile | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [savedAudioFiles, setSavedAudioFiles] = useState<any[]>([]);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
 
   // Mock audio files - will be replaced by uploaded files if available
@@ -127,69 +126,27 @@ const Index = () => {
   };
 
   const playAudio = async (fileId: string) => {
-    console.log('Playing audio, fileId:', fileId);
-    console.log('Available savedAudioFiles:', savedAudioFiles.length);
-    console.log('AudioFiles list:', audioFiles.map(f => f.id));
     const selectedTrack = audioFiles.find(f => f.id === fileId);
     if (!selectedTrack) return;
-    setCurrentTrack(selectedTrack);
-    if (!audioRef.current) return;
-
-    try {
-      // Try to load from IndexedDB via localforage
-      let src: string | null = null;
-      const stored = await localforage.getItem<string>(`audio:${fileId}`);
-      if (stored) {
-        console.log('Using uploaded audio from IndexedDB');
-        src = stored;
-      } else {
-        console.log('Using demo audio - no saved audio found');
-        src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
-      }
-      audioRef.current.src = src;
-      await audioRef.current.play();
-      setIsPlaying(true);
-    } catch (err) {
-      console.error('Error playing audio', err);
-      toast({ title: 'Playback error', description: 'Could not start audio playback.', variant: 'destructive' });
-    }
+    await audio.playTrack(selectedTrack);
   };
 
   const togglePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
+    audio.togglePlayPause();
   };
 
   const openFullPlayer = () => {
-    if (currentTrack) {
+    if (audio.currentTrack) {
       navigate('/player', { 
         state: { 
-          track: currentTrack,
-          allTracks: audioFiles,
-          isPlaying: isPlaying
+          allTracks: audioFiles
         } 
       });
     }
   };
 
   const skipToNext = async () => {
-    if (!currentTrack) return;
-    const currentIndex = audioFiles.findIndex(t => t.id === currentTrack.id);
-    const nextIndex = currentIndex < audioFiles.length - 1 ? currentIndex + 1 : 0;
-    const nextTrack = audioFiles[nextIndex];
-    setCurrentTrack(nextTrack);
-    if (!audioRef.current) return;
-
-    const stored = await localforage.getItem<string>(`audio:${nextTrack.id}`);
-    audioRef.current.src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
-    await audioRef.current.play();
-    setIsPlaying(true);
+    await audio.skipToNext(audioFiles);
   };
 
   const logout = () => {
@@ -342,33 +299,33 @@ const Index = () => {
       {/* Track List */}
       <div className="px-6 pb-32">
         <div className="max-w-3xl mx-auto space-y-1">
-          {audioFiles.map((file, index) => (
-            <div
-              key={file.id}
-              className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
-                currentTrack?.id === file.id ? 'bg-primary/10' : 'hover:bg-muted/30'
-              }`}
-              onClick={() => playAudio(file.id)}
-            >
-              <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
-              <div className="flex-1 min-w-0">
-                <p className={`font-medium truncate ${
-                  currentTrack?.id === file.id ? 'text-primary' : 'text-foreground'
-                }`}>
-                  {file.name}
-                </p>
-                <p className="text-sm text-muted-foreground truncate">
-                  {file.duration}
-                </p>
+            {audioFiles.map((file, index) => (
+              <div
+                key={file.id}
+                className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
+                  audio.currentTrack?.id === file.id ? 'bg-primary/10' : 'hover:bg-muted/30'
+                }`}
+                onClick={() => playAudio(file.id)}
+              >
+                <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className={`font-medium truncate ${
+                    audio.currentTrack?.id === file.id ? 'text-primary' : 'text-foreground'
+                  }`}>
+                    {file.name}
+                  </p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {file.duration}
+                  </p>
+                </div>
+                <Play className="h-5 w-5 text-muted-foreground shrink-0" />
               </div>
-              <Play className="h-5 w-5 text-muted-foreground shrink-0" />
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
       {/* Mini Player Bar */}
-      {currentTrack && (
+      {audio.currentTrack && (
         <div 
           className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 cursor-pointer"
           onClick={openFullPlayer}
@@ -381,10 +338,10 @@ const Index = () => {
             />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">
-                {currentTrack.name}
+                {audio.currentTrack.name}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {currentTrack.duration}
+                {audio.currentTrack.duration}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -397,7 +354,7 @@ const Index = () => {
                 }}
                 className="h-10 w-10"
               >
-                {isPlaying ? (
+                {audio.isPlaying ? (
                   <Pause className="h-5 w-5" fill="currentColor" />
                 ) : (
                   <Play className="h-5 w-5" fill="currentColor" />
@@ -418,9 +375,6 @@ const Index = () => {
           </div>
         </div>
       )}
-
-      {/* Hidden audio element */}
-      <audio ref={audioRef} />
     </div>
   );
 };
