@@ -9,35 +9,35 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 224 71% 4%;
+    --foreground: 160 100% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --card-foreground: 160 100% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover-foreground: 160 100% 10%;
 
-    --primary: 220 90% 56%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 221 83% 68%;
+    --primary: 158 100% 50%;
+    --primary-foreground: 160 100% 10%;
+    --primary-glow: 145 100% 60%;
 
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220 8.9% 46.1%;
+    --secondary: 158 50% 95%;
+    --secondary-foreground: 158 90% 25%;
 
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
+    --muted: 158 30% 95%;
+    --muted-foreground: 158 20% 40%;
 
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220 8.9% 46.1%;
+    --accent: 145 100% 55%;
+    --accent-foreground: 160 100% 10%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 90% 56%;
+    --border: 158 30% 90%;
+    --input: 158 30% 90%;
+    --ring: 158 100% 50%;
 
-    --success: 142 76% 36%;
+    --success: 142 100% 45%;
     --success-foreground: 0 0% 98%;
 
     --warning: 38 92% 50%;
@@ -48,8 +48,8 @@ All colors MUST be HSL.
     --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
 
     /* Shadows */
-    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.1);
-    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.15);
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
 
     /* Animation */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -74,48 +74,48 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
+    --background: 160 100% 3%;
+    --foreground: 145 100% 85%;
 
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
+    --card: 160 100% 3%;
+    --card-foreground: 145 100% 85%;
 
-    --popover: 224 71% 4%;
-    --popover-foreground: 213 31% 91%;
+    --popover: 160 100% 3%;
+    --popover-foreground: 145 100% 85%;
 
-    --primary: 221 83% 68%;
-    --primary-foreground: 224 71% 4%;
-    --primary-glow: 220 90% 76%;
+    --primary: 145 100% 60%;
+    --primary-foreground: 160 100% 5%;
+    --primary-glow: 158 100% 70%;
 
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 213 31% 91%;
+    --secondary: 158 50% 15%;
+    --secondary-foreground: 145 100% 85%;
 
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
+    --muted: 158 40% 15%;
+    --muted-foreground: 158 30% 60%;
 
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 213 31% 91%;
+    --accent: 145 100% 50%;
+    --accent-foreground: 145 100% 85%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 213 31% 91%;
+    --destructive-foreground: 145 100% 85%;
 
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 221 83% 68%;
+    --border: 158 40% 20%;
+    --input: 158 40% 20%;
+    --ring: 145 100% 60%;
 
-    --success: 142 76% 36%;
-    --success-foreground: 213 31% 91%;
+    --success: 142 100% 45%;
+    --success-foreground: 145 100% 85%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 224 71% 4%;
+    --warning-foreground: 160 100% 3%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
     --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
 
     /* Shadows */
-    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.2);
-    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.25);
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.4);
+    --shadow-glow: 0 0 50px hsl(var(--primary-glow) / 0.5);
 
     /* Animation */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -136,6 +136,6 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-orbitron;
   }
 }
