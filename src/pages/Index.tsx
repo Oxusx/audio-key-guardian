@@ -168,14 +168,11 @@ const Index = () => {
 
   const openFullPlayer = () => {
     if (currentTrack) {
-      const audioData = savedAudioFiles.find(f => f.id === currentTrack.id);
       navigate('/player', { 
         state: { 
           track: currentTrack,
           allTracks: audioFiles,
-          isPlaying: isPlaying,
-          audioData: audioData,
-          allAudioData: savedAudioFiles
+          isPlaying: isPlaying
         } 
       });
     }
@@ -246,13 +243,15 @@ const Index = () => {
   useEffect(() => {
     (async () => {
       try {
-        const savedCover = localStorage.getItem('projectCoverArt');
-        if (savedCover) {
-          setCoverArt(savedCover);
+        // Check IndexedDB first for cover art
+        const coverFromDB = await localforage.getItem<string>('projectCoverArt');
+        if (coverFromDB) {
+          setCoverArt(coverFromDB);
         } else {
-          const coverFromDB = await localforage.getItem<string>('projectCoverArt');
-          if (coverFromDB) {
-            setCoverArt(coverFromDB);
+          // Fallback to localStorage
+          const savedCover = localStorage.getItem('projectCoverArt');
+          if (savedCover) {
+            setCoverArt(savedCover);
           } else {
             setCoverArt(defaultCover);
           }

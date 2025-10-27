@@ -4,6 +4,7 @@ import { ChevronDown, MoreHorizontal, SkipBack, SkipForward, Play, Pause, Volume
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Slider } from '@/components/ui/slider';
 import defaultCover from '@/assets/cover-art.jpeg';
+import localforage from 'localforage';
 
 interface AudioFile {
   id: string;
@@ -32,10 +33,22 @@ const Player = () => {
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 150;
 
-  // Load saved cover art
+  // Load saved cover art from IndexedDB
   useEffect(() => {
-    const savedCover = localStorage.getItem('projectCoverArt');
-    if (savedCover) setCoverArt(savedCover);
+    (async () => {
+      try {
+        const savedCover = await localforage.getItem<string>('projectCoverArt');
+        if (savedCover) {
+          setCoverArt(savedCover);
+        } else {
+          // Fallback to localStorage if not in IndexedDB yet
+          const localCover = localStorage.getItem('projectCoverArt');
+          if (localCover) setCoverArt(localCover);
+        }
+      } catch (err) {
+        console.error('Error loading cover art:', err);
+      }
+    })();
   }, []);
 
   // Audio event handlers
@@ -63,18 +76,21 @@ const Player = () => {
 
   // Auto-play when component mounts if was playing
   useEffect(() => {
-    if (audioRef.current && initialIsPlaying) {
-      if (audioData && audioData.data) {
-        audioRef.current.src = audioData.data;
-      } else {
-        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+    (async () => {
+      if (audioRef.current && initialIsPlaying && currentTrack) {
+        try {
+          const stored = await localforage.getItem<string>(`audio:${currentTrack.id}`);
+          audioRef.current.src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+          await audioRef.current.play();
+          setIsPlaying(true);
+        } catch (err) {
+          console.error('Error auto-playing audio:', err);
+        }
       }
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
-  }, [initialIsPlaying, audioData]);
+    })();
+  }, [initialIsPlaying, currentTrack]);
 
-  const handlePrevious = () => {
+  const handlePrevious = async () => {
     if (!allTracks || !currentTrack) return;
     const currentIndex = allTracks.findIndex((t: AudioFile) => t.id === currentTrack.id);
     const previousIndex = currentIndex > 0 ? currentIndex - 1 : allTracks.length - 1;
@@ -82,18 +98,18 @@ const Player = () => {
     setCurrentTrack(previousTrack);
     
     if (audioRef.current) {
-      const prevAudioData = allAudioData?.find((a: any) => a.id === previousTrack.id);
-      if (prevAudioData && prevAudioData.data) {
-        audioRef.current.src = prevAudioData.data;
-      } else {
-        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      try {
+        const stored = await localforage.getItem<string>(`audio:${previousTrack.id}`);
+        audioRef.current.src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (err) {
+        console.error('Error playing previous track:', err);
       }
-      audioRef.current.play();
-      setIsPlaying(true);
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!allTracks || !currentTrack) return;
     const currentIndex = allTracks.findIndex((t: AudioFile) => t.id === currentTrack.id);
     const nextIndex = currentIndex < allTracks.length - 1 ? currentIndex + 1 : 0;
@@ -101,14 +117,14 @@ const Player = () => {
     setCurrentTrack(nextTrack);
     
     if (audioRef.current) {
-      const nextAudioData = allAudioData?.find((a: any) => a.id === nextTrack.id);
-      if (nextAudioData && nextAudioData.data) {
-        audioRef.current.src = nextAudioData.data;
-      } else {
-        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      try {
+        const stored = await localforage.getItem<string>(`audio:${nextTrack.id}`);
+        audioRef.current.src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (err) {
+        console.error('Error playing next track:', err);
       }
-      audioRef.current.play();
-      setIsPlaying(true);
     }
   };
 
