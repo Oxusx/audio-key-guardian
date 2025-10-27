@@ -13,6 +13,7 @@ interface InvestmentConfirmationRequest {
   email: string;
   amount: number;
   projectName: string;
+  contractTerms?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -22,36 +23,40 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, amount, projectName }: InvestmentConfirmationRequest = await req.json();
+    const { email, amount, projectName, contractTerms }: InvestmentConfirmationRequest = await req.json();
 
     console.log(`Sending investment confirmation to ${email} for $${amount} in ${projectName}`);
 
+    const contractSection = contractTerms ? `
+      <div style="margin-top: 30px; padding: 20px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #333;">Investment Contract</h2>
+        <pre style="white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.6;">${contractTerms}</pre>
+      </div>
+    ` : '';
+
     const emailResponse = await resend.emails.send({
-      from: "Lovable <onboarding@resend.dev>",
+      from: "Music Project <onboarding@resend.dev>",
       to: [email],
       subject: `Investment Confirmation - ${projectName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #333;">Thank You for Your Investment!</h1>
-          <p>We're excited to confirm your investment in <strong>${projectName}</strong>.</p>
+          <h1 style="color: #333;">Investment Confirmed!</h1>
+          <p>Thank you for investing in <strong>${projectName}</strong>!</p>
           
-          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h2 style="margin-top: 0;">Investment Details</h2>
-            <p><strong>Project:</strong> ${projectName}</p>
-            <p><strong>Investment Amount:</strong> $${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p><strong>Email:</strong> ${email}</p>
+          <div style="background-color: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Investment Amount:</strong> $${amount.toLocaleString()}</p>
+            <p style="margin: 5px 0;"><strong>Project:</strong> ${projectName}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
           </div>
-
-          <p>Your investment will help bring this project to life. You'll receive updates on the project's progress and your expected returns.</p>
           
-          <p>As a valued investor, you can expect:</p>
-          <ul>
-            <li>Exclusive merchandise</li>
-            <li>Priority access to concert tickets</li>
-            <li>Share in the project's success</li>
-            <li>Regular progress updates</li>
-          </ul>
-
+          <p>Your payment has been processed successfully. ${contractTerms ? 'Below is your legally binding investment contract.' : 'You will receive your contract details shortly.'}</p>
+          
+          ${contractSection}
+          
+          <p style="margin-top: 30px;">We will keep you updated on the project's progress. You will receive exclusive merchandise, concert tickets, and your expected return on investment as outlined in the contract.</p>
+          
+          <p>If you have any questions, please don't hesitate to contact us.</p>
+          
           <p style="margin-top: 30px;">Best regards,<br><strong>${projectName} Team</strong></p>
           
           <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />

@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      contracts: {
+        Row: {
+          admin_email: string
+          admin_signed_at: string | null
+          contract_date: string
+          contract_terms: string
+          created_at: string
+          expected_return: number
+          id: string
+          investment_amount: number
+          investment_id: string | null
+          investor_email: string
+          investor_signed_at: string | null
+          project_name: string
+          roi_percentage: number
+        }
+        Insert: {
+          admin_email: string
+          admin_signed_at?: string | null
+          contract_date?: string
+          contract_terms: string
+          created_at?: string
+          expected_return: number
+          id?: string
+          investment_amount: number
+          investment_id?: string | null
+          investor_email: string
+          investor_signed_at?: string | null
+          project_name: string
+          roi_percentage: number
+        }
+        Update: {
+          admin_email?: string
+          admin_signed_at?: string | null
+          contract_date?: string
+          contract_terms?: string
+          created_at?: string
+          expected_return?: number
+          id?: string
+          investment_amount?: number
+          investment_id?: string | null
+          investor_email?: string
+          investor_signed_at?: string | null
+          project_name?: string
+          roi_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investments: {
         Row: {
           amount: number
