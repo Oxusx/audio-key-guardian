@@ -444,26 +444,6 @@ const AdminPanel = () => {
           </Card>
         </div>
 
-        {/* Save Project Settings */}
-        <Card className="shadow-elegant">
-          <CardHeader>
-            <CardTitle>Save Project Settings</CardTitle>
-            <CardDescription>
-              Save your uploaded files and settings to see them on the user side
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={handleSaveProjectSettings}
-              className="w-full"
-              variant="gradient"
-              disabled={!coverArt && audioFiles.length === 0 && investmentBudget <= 0}
-            >
-              Save Project Settings
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* Investment Budget */}
         <Card className="shadow-elegant">
           <CardHeader>
@@ -533,6 +513,26 @@ const AdminPanel = () => {
                 <p className="text-sm text-muted-foreground">Temporary Access</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Save Project Settings */}
+        <Card className="shadow-elegant">
+          <CardHeader>
+            <CardTitle>Save Project Settings</CardTitle>
+            <CardDescription>
+              Save your uploaded files and settings to see them on the user side
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={handleSaveProjectSettings}
+              className="w-full"
+              variant="gradient"
+              disabled={!coverArt && audioFiles.length === 0 && investmentBudget <= 0}
+            >
+              Save Project Settings
+            </Button>
           </CardContent>
         </Card>
 
