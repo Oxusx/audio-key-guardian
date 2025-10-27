@@ -19,7 +19,7 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				orbitron: ['Orbitron', 'sans-serif'],
+				scarface: ['Bebas Neue', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

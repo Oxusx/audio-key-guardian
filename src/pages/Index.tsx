@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Play, Pause, Volume2, VolumeX, Unlock, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import defaultCover from '@/assets/cover-art.jpeg';
 
 interface AudioFile {
   id: string;
@@ -222,7 +223,11 @@ const Index = () => {
   useEffect(() => {
     const savedCover = localStorage.getItem('projectCoverArt');
     const savedAudioFile = localStorage.getItem('projectAudio');
-    if (savedCover) setCoverArt(savedCover);
+    if (savedCover) {
+      setCoverArt(savedCover);
+    } else {
+      setCoverArt(defaultCover);
+    }
     if (savedAudioFile) setSavedAudio(savedAudioFile);
   }, []);
 
