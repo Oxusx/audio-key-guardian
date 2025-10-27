@@ -15,9 +15,9 @@ interface AudioFile {
 const Player = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { track, allTracks } = location.state || {};
+  const { track, allTracks, isPlaying: initialIsPlaying } = location.state || {};
   
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(initialIsPlaying || false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -29,7 +29,7 @@ const Player = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Minimum swipe distance (in px) to trigger navigation
-  const minSwipeDistance = 100;
+  const minSwipeDistance = 150;
 
   // Load saved cover art
   useEffect(() => {
@@ -60,14 +60,14 @@ const Player = () => {
     };
   }, []);
 
-  // Auto-play when component mounts
+  // Auto-play when component mounts if was playing
   useEffect(() => {
-    if (audioRef.current) {
+    if (audioRef.current && initialIsPlaying) {
       audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
       audioRef.current.play();
       setIsPlaying(true);
     }
-  }, []);
+  }, [initialIsPlaying]);
 
   const togglePlay = () => {
     if (audioRef.current) {

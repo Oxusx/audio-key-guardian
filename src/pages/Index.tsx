@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Volume2, Settings, Unlock } from 'lucide-react';
+import { Play, Volume2, Settings, Unlock, Pause, SkipForward } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import defaultCover from '@/assets/cover-art.jpeg';
@@ -25,6 +25,9 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessInfo, setAccessInfo] = useState<AccessInfo | null>(null);
   const [coverArt, setCoverArt] = useState<string>('');
+  const [currentTrack, setCurrentTrack] = useState<AudioFile | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
 
   // Mock audio files - in real app, these would come from the server
@@ -115,12 +118,48 @@ const Index = () => {
   const playAudio = (fileId: string) => {
     const selectedTrack = audioFiles.find(f => f.id === fileId);
     if (selectedTrack) {
+      setCurrentTrack(selectedTrack);
+      if (audioRef.current) {
+        audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const openFullPlayer = () => {
+    if (currentTrack) {
       navigate('/player', { 
         state: { 
-          track: selectedTrack,
-          allTracks: audioFiles
+          track: currentTrack,
+          allTracks: audioFiles,
+          isPlaying: isPlaying
         } 
       });
+    }
+  };
+
+  const skipToNext = () => {
+    if (!currentTrack) return;
+    const currentIndex = audioFiles.findIndex(t => t.id === currentTrack.id);
+    const nextIndex = currentIndex < audioFiles.length - 1 ? currentIndex + 1 : 0;
+    const nextTrack = audioFiles[nextIndex];
+    setCurrentTrack(nextTrack);
+    if (audioRef.current) {
+      audioRef.current.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      audioRef.current.play();
+      setIsPlaying(true);
     }
   };
 
@@ -246,17 +285,21 @@ const Index = () => {
       </div>
 
       {/* Track List */}
-      <div className="px-6 pb-8">
+      <div className="px-6 pb-32">
         <div className="max-w-3xl mx-auto space-y-1">
           {audioFiles.map((file, index) => (
             <div
               key={file.id}
-              className="flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer hover:bg-muted/30"
+              className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
+                currentTrack?.id === file.id ? 'bg-primary/10' : 'hover:bg-muted/30'
+              }`}
               onClick={() => playAudio(file.id)}
             >
               <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate text-foreground">
+                <p className={`font-medium truncate ${
+                  currentTrack?.id === file.id ? 'text-primary' : 'text-foreground'
+                }`}>
                   {file.name}
                 </p>
                 <p className="text-sm text-muted-foreground truncate">
@@ -268,6 +311,61 @@ const Index = () => {
           ))}
         </div>
       </div>
+
+      {/* Mini Player Bar */}
+      {currentTrack && (
+        <div 
+          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 cursor-pointer"
+          onClick={openFullPlayer}
+        >
+          <div className="px-4 py-3 flex items-center gap-3">
+            <img 
+              src={coverArt} 
+              alt="Now Playing" 
+              className="w-12 h-12 rounded-lg object-cover shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {currentTrack.name}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {currentTrack.duration}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlayPause();
+                }}
+                className="h-10 w-10"
+              >
+                {isPlaying ? (
+                  <Pause className="h-5 w-5" fill="currentColor" />
+                ) : (
+                  <Play className="h-5 w-5" fill="currentColor" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  skipToNext();
+                }}
+                className="h-10 w-10"
+              >
+                <SkipForward className="h-5 w-5" fill="currentColor" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden audio element */}
+      <audio ref={audioRef} />
     </div>
   );
 };
