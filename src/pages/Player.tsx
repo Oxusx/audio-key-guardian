@@ -23,7 +23,13 @@ const Player = () => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(75);
   const [coverArt, setCoverArt] = useState<string>(defaultCover);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [swipeDistance, setSwipeDistance] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Minimum swipe distance (in px) to trigger navigation
+  const minSwipeDistance = 100;
 
   // Load saved cover art
   useEffect(() => {
@@ -139,13 +145,55 @@ const Player = () => {
     return `-${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientY);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const currentTouch = e.targetTouches[0].clientY;
+    setTouchEnd(currentTouch);
+    if (touchStart) {
+      const distance = currentTouch - touchStart;
+      // Only track downward swipes
+      if (distance > 0) {
+        setSwipeDistance(distance);
+      }
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchEnd - touchStart;
+    const isDownSwipe = distance > minSwipeDistance;
+    
+    if (isDownSwipe) {
+      navigate('/');
+    }
+    
+    // Reset states
+    setTouchStart(null);
+    setTouchEnd(null);
+    setSwipeDistance(0);
+  };
+
   if (!track) {
     navigate('/');
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-background relative flex flex-col">
+    <div 
+      className="min-h-screen bg-background relative flex flex-col transition-transform duration-200"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      style={{
+        transform: swipeDistance > 0 ? `translateY(${Math.min(swipeDistance, 200)}px)` : 'none',
+        opacity: swipeDistance > 0 ? Math.max(1 - swipeDistance / 400, 0.7) : 1
+      }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4">
         <Button
