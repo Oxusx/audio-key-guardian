@@ -1,10 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Play, Pause, Volume2, VolumeX, Lock, Unlock, Clock, Infinity, Settings } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Unlock, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 
@@ -221,141 +218,149 @@ const Index = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-subtle relative">
+      <div className="min-h-screen bg-background relative">
         {/* Admin Login Button - Top Right */}
         <div className="absolute top-6 right-6">
           <Link to="/admin">
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
               <Settings className="h-4 w-4" />
-              Admin
             </Button>
           </Link>
         </div>
 
         {/* Main Password Entry */}
         <div className="min-h-screen flex items-center justify-center p-6">
-          <Card className="w-full max-w-md shadow-glow border-primary/20">
-            <CardContent className="pt-12 pb-12">
-              <form onSubmit={handlePasswordSubmit} className="space-y-6">
-                <Input
-                  id="password"
-                  type="text"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="KEY"
-                  className="text-center text-2xl font-mono tracking-widest h-16 bg-background/50 border-primary/30 focus:border-primary"
-                  autoComplete="off"
-                  autoFocus
-                />
-                <Button type="submit" className="w-full" variant="gradient" size="lg">
-                  <Unlock className="h-5 w-5" />
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          <div className="w-full max-w-md">
+            <form onSubmit={handlePasswordSubmit} className="space-y-6">
+              <Input
+                id="password"
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="KEY"
+                className="text-center text-2xl font-mono tracking-widest h-16 bg-card/50 border-primary/30 focus:border-primary backdrop-blur-sm"
+                autoComplete="off"
+                autoFocus
+              />
+              <Button type="submit" className="w-full" variant="gradient" size="lg">
+                <Unlock className="h-5 w-5" />
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Get saved cover art and audio from localStorage
+  const [coverArt, setCoverArt] = useState<string>('');
+  const [savedAudio, setSavedAudio] = useState<string>('');
+
+  useEffect(() => {
+    const savedCover = localStorage.getItem('projectCoverArt');
+    const savedAudioFile = localStorage.getItem('projectAudio');
+    if (savedCover) setCoverArt(savedCover);
+    if (savedAudioFile) setSavedAudio(savedAudioFile);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-subtle relative">
-      {/* Header with access info and logout */}
-      <div className="flex justify-between items-center p-6 border-b bg-background/50 backdrop-blur-sm">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Audio Library
-          </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline" className="flex items-center gap-1">
-              {accessInfo?.accessType === 'indefinite' ? (
-                <Infinity className="h-3 w-3" />
-              ) : (
-                <Clock className="h-3 w-3" />
-              )}
-              {accessInfo?.accessType} access
-            </Badge>
-            {accessInfo?.expiresAt && (
-              <Badge variant="secondary" className="text-xs">
-                Expires: {accessInfo.expiresAt.toLocaleString()}
-              </Badge>
-            )}
-          </div>
-        </div>
-        <Button variant="outline" onClick={logout}>
-          Logout
-        </Button>
+    <div className="min-h-screen bg-background relative">
+      {/* Admin Login Button - Top Right */}
+      <div className="absolute top-4 right-4 z-10">
+        <Link to="/admin">
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </Link>
       </div>
 
-      {/* Audio Player */}
-      <div className="p-6">
-        <div className="max-w-4xl mx-auto">
-          <Card className="shadow-elegant">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Volume2 className="h-5 w-5" />
-                Available Audio Files
-              </CardTitle>
-              <CardDescription>
-                Click on any audio file to start playback
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {audioFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className={`flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md ${
-                      currentPlaying === file.id 
-                        ? 'bg-primary/5 border-primary shadow-glow' 
-                        : 'bg-background hover:bg-muted/50'
-                    }`}
-                    onClick={() => playAudio(file.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant={currentPlaying === file.id && isPlaying ? "default" : "outline"}
-                        size="sm"
-                        className="shrink-0"
-                      >
-                        {currentPlaying === file.id && isPlaying ? (
-                          <Pause className="h-4 w-4" />
-                        ) : (
-                          <Play className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <div>
-                        <p className="font-medium">{file.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Duration: {file.duration} • Size: {file.size}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {currentPlaying === file.id && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                          {formatTime(currentTime)} / {formatTime(duration)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleMute();
-                          }}
-                        >
-                          {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      {/* Cover Art Section */}
+      <div className="pt-16 px-6 pb-8">
+        <div className="max-w-md mx-auto">
+          {coverArt ? (
+            <img 
+              src={coverArt} 
+              alt="Album Cover" 
+              className="w-full aspect-square object-cover rounded-2xl shadow-glow"
+            />
+          ) : (
+            <div className="w-full aspect-square bg-gradient-primary rounded-2xl shadow-glow flex items-center justify-center">
+              <Volume2 className="h-24 w-24 text-primary-foreground/50" />
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Track List */}
+      <div className="px-6 pb-32">
+        <div className="max-w-3xl mx-auto space-y-1">
+          {audioFiles.map((file, index) => (
+            <div
+              key={file.id}
+              className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
+                currentPlaying === file.id 
+                  ? 'bg-primary/10' 
+                  : 'hover:bg-muted/30'
+              }`}
+              onClick={() => playAudio(file.id)}
+            >
+              <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className={`font-medium truncate ${
+                  currentPlaying === file.id ? 'text-primary' : 'text-foreground'
+                }`}>
+                  {file.name}
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {file.duration}
+                </p>
+              </div>
+              {currentPlaying === file.id && isPlaying ? (
+                <Pause className="h-5 w-5 text-primary shrink-0" />
+              ) : (
+                <Play className="h-5 w-5 text-muted-foreground shrink-0" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Now Playing Bar */}
+      {currentPlaying && (
+        <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 px-6 py-4">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {coverArt && (
+                <img 
+                  src={coverArt} 
+                  alt="Now Playing" 
+                  className="w-12 h-12 rounded-lg object-cover"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm truncate">
+                  {audioFiles.find(f => f.id === currentPlaying)?.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatTime(currentTime)} / {formatTime(duration)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleMute();
+                }}
+              >
+                {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hidden audio element */}
       <audio ref={audioRef} />
