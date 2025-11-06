@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, MoreHorizontal, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Heart } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Slider } from '@/components/ui/slider';
 import { useAudio } from '@/contexts/AudioContext';
 import defaultCover from '@/assets/cover-art.jpeg';
 import localforage from 'localforage';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AudioFile {
   id: string;
@@ -24,6 +25,7 @@ const Player = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [swipeDistance, setSwipeDistance] = useState(0);
+  const [likeCount, setLikeCount] = useState(0);
 
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 150;
@@ -45,6 +47,13 @@ const Player = () => {
       }
     })();
   }, []);
+
+  // Fetch like count when track changes
+  useEffect(() => {
+    if (audio.currentTrack) {
+      fetchLikeCount();
+    }
+  }, [audio.currentTrack]);
 
   const handlePrevious = async () => {
     if (!allTracks) return;
@@ -69,6 +78,26 @@ const Player = () => {
     const minutes = Math.floor(remaining / 60);
     const seconds = Math.floor(remaining % 60);
     return `-${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleLike = async () => {
+    if (!audio.currentTrack) return;
+    try {
+      await supabase.from('track_likes').insert({ track_name: audio.currentTrack.name });
+      setLikeCount(prev => prev + 1);
+    } catch (error) {
+      console.error('Error liking track:', error);
+    }
+  };
+
+  const fetchLikeCount = async () => {
+    if (!audio.currentTrack) return;
+    const { data, error } = await supabase.rpc('get_track_like_count', {
+      track_name_param: audio.currentTrack.name
+    });
+    if (!error && data !== null) {
+      setLikeCount(data);
+    }
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -159,6 +188,13 @@ const Player = () => {
               {audio.currentTrack.duration} • {audio.currentTrack.size}
             </p>
           </div>
+          <button
+            onClick={handleLike}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-red-500 transition-colors shrink-0"
+          >
+            <Heart className="h-5 w-5" />
+            <span className="text-sm font-medium">{likeCount}</span>
+          </button>
         </div>
       </div>
 

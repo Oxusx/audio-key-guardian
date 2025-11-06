@@ -94,12 +94,34 @@ export type Database = {
         }
         Relationships: []
       }
+      track_likes: {
+        Row: {
+          created_at: string
+          id: string
+          track_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          track_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          track_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       get_total_investments: { Args: never; Returns: number }
+      get_track_like_count: {
+        Args: { track_name_param: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

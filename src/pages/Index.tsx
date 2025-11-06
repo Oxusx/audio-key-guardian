@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Volume2, Settings, Unlock, Pause, SkipForward, Key } from 'lucide-react';
+import { Play, Volume2, Settings, Unlock, Pause, SkipForward, Key, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAudio } from '@/contexts/AudioContext';
 import defaultCover from '@/assets/cover-art.jpeg';
 import localforage from 'localforage';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AudioFile {
   id: string;
@@ -29,6 +30,7 @@ const Index = () => {
   const [accessInfo, setAccessInfo] = useState<AccessInfo | null>(null);
   const [coverArt, setCoverArt] = useState<string>('');
   const [savedAudioFiles, setSavedAudioFiles] = useState<any[]>([]);
+  const [trackLikes, setTrackLikes] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
   // Mock audio files - will be replaced by uploaded files if available
@@ -160,6 +162,32 @@ const Index = () => {
     });
   };
 
+  const handleLike = async (trackName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await supabase.from('track_likes').insert({ track_name: trackName });
+      setTrackLikes(prev => ({
+        ...prev,
+        [trackName]: (prev[trackName] || 0) + 1
+      }));
+    } catch (error) {
+      console.error('Error liking track:', error);
+    }
+  };
+
+  const fetchLikeCounts = async () => {
+    const counts: Record<string, number> = {};
+    for (const file of audioFiles) {
+      const { data, error } = await supabase.rpc('get_track_like_count', {
+        track_name_param: file.name
+      });
+      if (!error && data !== null) {
+        counts[file.name] = data;
+      }
+    }
+    setTrackLikes(counts);
+  };
+
   // Check for existing access on component mount
   useEffect(() => {
     const storedAccess = localStorage.getItem('audioAccessInfo');
@@ -231,6 +259,13 @@ const Index = () => {
       }
     })();
   }, []);
+
+  // Fetch like counts when authenticated
+  useEffect(() => {
+    if (isAuthenticated && audioFiles.length > 0) {
+      fetchLikeCounts();
+    }
+  }, [isAuthenticated, savedAudioFiles]);
 
   if (!isAuthenticated) {
     return (
@@ -330,6 +365,13 @@ const Index = () => {
                     {file.duration}
                   </p>
                 </div>
+                <button
+                  onClick={(e) => handleLike(file.name, e)}
+                  className="flex items-center gap-1 text-muted-foreground hover:text-red-500 transition-colors shrink-0"
+                >
+                  <Heart className="h-4 w-4" />
+                  <span className="text-xs">{trackLikes[file.name] || 0}</span>
+                </button>
                 <Play className="h-5 w-5 text-muted-foreground shrink-0" />
               </div>
             ))}
