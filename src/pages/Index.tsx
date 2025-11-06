@@ -31,6 +31,8 @@ const Index = () => {
   const [coverArt, setCoverArt] = useState<string>('');
   const [savedAudioFiles, setSavedAudioFiles] = useState<any[]>([]);
   const [trackLikes, setTrackLikes] = useState<Record<string, number>>({});
+  const [userLikes, setUserLikes] = useState<Set<string>>(new Set());
+  const [userSessionId, setUserSessionId] = useState<string>('');
   const { toast } = useToast();
 
   // Mock audio files - will be replaced by uploaded files if available
@@ -92,10 +94,15 @@ const Index = () => {
       setAccessInfo(accessData);
       setIsAuthenticated(true);
       
+      // Generate unique session ID for this user
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setUserSessionId(sessionId);
+      
       // Store access info in localStorage for persistence
       localStorage.setItem('audioAccessInfo', JSON.stringify({
         ...accessData,
         enteredAt: new Date().toISOString(),
+        sessionId,
       }));
       
       toast({
@@ -164,8 +171,37 @@ const Index = () => {
 
   const handleLike = async (trackName: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (!userSessionId) return;
+    
+    // Check if already liked
+    if (userLikes.has(trackName)) {
+      toast({
+        title: "Already liked",
+        description: "You've already liked this track.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
-      await supabase.from('track_likes').insert({ track_name: trackName });
+      const { error } = await supabase.from('track_likes').insert({ 
+        track_name: trackName,
+        user_session_id: userSessionId
+      });
+      
+      if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+          toast({
+            title: "Already liked",
+            description: "You've already liked this track.",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+      
+      setUserLikes(prev => new Set(prev).add(trackName));
       setTrackLikes(prev => ({
         ...prev,
         [trackName]: (prev[trackName] || 0) + 1
@@ -188,6 +224,22 @@ const Index = () => {
     setTrackLikes(counts);
   };
 
+  const fetchUserLikes = async () => {
+    if (!userSessionId) return;
+    
+    const likedTracks = new Set<string>();
+    for (const file of audioFiles) {
+      const { data, error } = await supabase.rpc('has_user_liked_track', {
+        track_name_param: file.name,
+        session_id_param: userSessionId
+      });
+      if (!error && data === true) {
+        likedTracks.add(file.name);
+      }
+    }
+    setUserLikes(likedTracks);
+  };
+
   // Check for existing access on component mount
   useEffect(() => {
     const storedAccess = localStorage.getItem('audioAccessInfo');
@@ -203,6 +255,7 @@ const Index = () => {
             isValid: true,
           });
           setIsAuthenticated(true);
+          setUserSessionId(accessData.sessionId || '');
         } else {
           localStorage.removeItem('audioAccessInfo');
         }
@@ -214,6 +267,7 @@ const Index = () => {
           isValid: true,
         });
         setIsAuthenticated(true);
+        setUserSessionId(accessData.sessionId || '');
       }
     }
   }, []);
@@ -260,12 +314,13 @@ const Index = () => {
     })();
   }, []);
 
-  // Fetch like counts when authenticated
+  // Fetch like counts and user likes when authenticated
   useEffect(() => {
-    if (isAuthenticated && audioFiles.length > 0) {
+    if (isAuthenticated && audioFiles.length > 0 && userSessionId) {
       fetchLikeCounts();
+      fetchUserLikes();
     }
-  }, [isAuthenticated, savedAudioFiles]);
+  }, [isAuthenticated, savedAudioFiles, userSessionId]);
 
   if (!isAuthenticated) {
     return (
@@ -367,9 +422,16 @@ const Index = () => {
                 </div>
                 <button
                   onClick={(e) => handleLike(file.name, e)}
-                  className="flex items-center gap-1 text-muted-foreground hover:text-red-500 transition-colors shrink-0"
+                  className={`flex items-center gap-1 transition-colors shrink-0 ${
+                    userLikes.has(file.name) 
+                      ? 'text-red-500' 
+                      : 'text-muted-foreground hover:text-red-500'
+                  }`}
                 >
-                  <Heart className="h-4 w-4" />
+                  <Heart 
+                    className="h-4 w-4" 
+                    fill={userLikes.has(file.name) ? 'currentColor' : 'none'}
+                  />
                   <span className="text-xs">{trackLikes[file.name] || 0}</span>
                 </button>
                 <Play className="h-5 w-5 text-muted-foreground shrink-0" />

@@ -26,11 +26,13 @@ const Player = () => {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [swipeDistance, setSwipeDistance] = useState(0);
   const [likeCount, setLikeCount] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [userSessionId, setUserSessionId] = useState<string>('');
 
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 150;
 
-  // Load saved cover art from IndexedDB
+  // Load saved cover art from IndexedDB and session ID
   useEffect(() => {
     (async () => {
       try {
@@ -42,18 +44,26 @@ const Player = () => {
           const localCover = localStorage.getItem('projectCoverArt');
           if (localCover) setCoverArt(localCover);
         }
+        
+        // Load user session ID
+        const storedAccess = localStorage.getItem('audioAccessInfo');
+        if (storedAccess) {
+          const accessData = JSON.parse(storedAccess);
+          setUserSessionId(accessData.sessionId || '');
+        }
       } catch (err) {
         console.error('Error loading cover art:', err);
       }
     })();
   }, []);
 
-  // Fetch like count when track changes
+  // Fetch like count and check if liked when track changes
   useEffect(() => {
-    if (audio.currentTrack) {
+    if (audio.currentTrack && userSessionId) {
       fetchLikeCount();
+      checkIfLiked();
     }
-  }, [audio.currentTrack]);
+  }, [audio.currentTrack, userSessionId]);
 
   const handlePrevious = async () => {
     if (!allTracks) return;
@@ -81,10 +91,23 @@ const Player = () => {
   };
 
   const handleLike = async () => {
-    if (!audio.currentTrack) return;
+    if (!audio.currentTrack || !userSessionId || hasLiked) return;
+    
     try {
-      await supabase.from('track_likes').insert({ track_name: audio.currentTrack.name });
-      setLikeCount(prev => prev + 1);
+      const { error } = await supabase.from('track_likes').insert({ 
+        track_name: audio.currentTrack.name,
+        user_session_id: userSessionId
+      });
+      
+      if (error && error.code === '23505') {
+        // Already liked
+        return;
+      }
+      
+      if (!error) {
+        setLikeCount(prev => prev + 1);
+        setHasLiked(true);
+      }
     } catch (error) {
       console.error('Error liking track:', error);
     }
@@ -97,6 +120,17 @@ const Player = () => {
     });
     if (!error && data !== null) {
       setLikeCount(data);
+    }
+  };
+
+  const checkIfLiked = async () => {
+    if (!audio.currentTrack || !userSessionId) return;
+    const { data, error } = await supabase.rpc('has_user_liked_track', {
+      track_name_param: audio.currentTrack.name,
+      session_id_param: userSessionId
+    });
+    if (!error) {
+      setHasLiked(data === true);
     }
   };
 
@@ -190,9 +224,17 @@ const Player = () => {
           </div>
           <button
             onClick={handleLike}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-red-500 transition-colors shrink-0"
+            className={`flex items-center gap-1.5 transition-colors shrink-0 ${
+              hasLiked 
+                ? 'text-red-500 cursor-default' 
+                : 'text-muted-foreground hover:text-red-500'
+            }`}
+            disabled={hasLiked}
           >
-            <Heart className="h-5 w-5" />
+            <Heart 
+              className="h-5 w-5" 
+              fill={hasLiked ? 'currentColor' : 'none'}
+            />
             <span className="text-sm font-medium">{likeCount}</span>
           </button>
         </div>

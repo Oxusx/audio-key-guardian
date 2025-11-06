@@ -99,16 +99,19 @@ export type Database = {
           created_at: string
           id: string
           track_name: string
+          user_session_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           track_name: string
+          user_session_id?: string
         }
         Update: {
           created_at?: string
           id?: string
           track_name?: string
+          user_session_id?: string
         }
         Relationships: []
       }
@@ -121,6 +124,10 @@ export type Database = {
       get_track_like_count: {
         Args: { track_name_param: string }
         Returns: number
+      }
+      has_user_liked_track: {
+        Args: { session_id_param: string; track_name_param: string }
+        Returns: boolean
       }
     }
     Enums: {
