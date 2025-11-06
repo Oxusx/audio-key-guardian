@@ -422,12 +422,12 @@ const AdminPanel = () => {
               <div className="mt-4 p-4 bg-muted rounded-lg">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Admin Investment (50%)</p>
-                    <p className="font-semibold text-primary">${(investmentBudget * 0.5).toLocaleString()}</p>
+                    <p className="text-muted-foreground">Admin Investment (51%)</p>
+                    <p className="font-semibold text-primary">${(investmentBudget * 0.51).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Available for Users (50%)</p>
-                    <p className="font-semibold text-success">${(investmentBudget * 0.5).toLocaleString()}</p>
+                    <p className="text-muted-foreground">Available for Users (49%)</p>
+                    <p className="font-semibold text-success">${(investmentBudget * 0.49).toLocaleString()}</p>
                   </div>
                 </div>
               </div>

@@ -89,8 +89,10 @@ The Project Owner agrees to provide the Investor with a return of ${roiPercentag
 3. PAYMENT TERMS
 The return on investment shall be paid to the Investor within 12 months from the date of this Agreement, unless otherwise agreed upon in writing by both parties.
 
-4. PROJECT DETAILS
+4. PROJECT DETAILS AND OWNERSHIP STRUCTURE
 The Investment Amount will be used for the production, marketing, and distribution of the music project titled "${sanitizedProjectName}".
+
+The Admin/Project Owner maintains 51% controlling ownership of the project, with up to 49% available for investor participation collectively. This ensures the Admin retains majority control and decision-making authority over all project aspects.
 
 IMPORTANT: MASTERS AND MUSIC RIGHTS EXCLUSION
 The Investor acknowledges and explicitly agrees that this investment does NOT include, convey, or transfer any ownership, rights, title, or interest in:

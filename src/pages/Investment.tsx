@@ -27,7 +27,7 @@ const Investment = () => {
   // Get project details from localStorage
   const projectName = localStorage.getItem('projectName') || 'Music Project';
   const totalBudget = parseFloat(localStorage.getItem('totalBudget') || '10000');
-  const maxInvestment = totalBudget * 0.5; // 50% of budget
+  const maxInvestment = totalBudget * 0.49; // 49% of budget (admin keeps 51%)
 
   // Calculate progress percentage
   const progressPercentage = (totalInvested / totalBudget) * 100;
@@ -77,7 +77,7 @@ const Investment = () => {
     if (investmentAmount > maxInvestment) {
       toast({
         title: 'Amount Too High',
-        description: `Maximum investment is $${maxInvestment.toLocaleString()} (50% of budget).`,
+        description: `Maximum investment is $${maxInvestment.toLocaleString()} (49% of budget - admin retains 51%).`,
         variant: 'destructive',
       });
       return;
