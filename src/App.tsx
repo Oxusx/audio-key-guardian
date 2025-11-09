@@ -11,6 +11,7 @@ import Investment from "./pages/Investment";
 import Contracts from "./pages/Contracts";
 import ArtistKeys from "./pages/ArtistKeys";
 import Player from "./pages/Player";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
         <AudioProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/user" element={<User />} />
             <Route path="/investment" element={<Investment />} />

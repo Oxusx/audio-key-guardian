@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_keys: {
+        Row: {
+          access_type: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_code: string
+        }
+        Insert: {
+          access_type: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_code: string
+        }
+        Update: {
+          access_type?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_code?: string
+        }
+        Relationships: []
+      }
+      admin_settings: {
+        Row: {
+          admin_id: string
+          cover_art_url: string | null
+          created_at: string
+          id: string
+          investment_budget: number | null
+          project_name: string | null
+          roi_percentage: number | null
+          updated_at: string
+        }
+        Insert: {
+          admin_id: string
+          cover_art_url?: string | null
+          created_at?: string
+          id?: string
+          investment_budget?: number | null
+          project_name?: string | null
+          roi_percentage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string
+          cover_art_url?: string | null
+          created_at?: string
+          id?: string
+          investment_budget?: number | null
+          project_name?: string | null
+          roi_percentage?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      audio_files: {
+        Row: {
+          admin_id: string
+          created_at: string
+          duration: string | null
+          file_name: string
+          file_size: string | null
+          file_url: string
+          id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          duration?: string | null
+          file_name: string
+          file_size?: string | null
+          file_url: string
+          id?: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          duration?: string | null
+          file_name?: string
+          file_size?: string | null
+          file_url?: string
+          id?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           admin_email: string
@@ -115,6 +208,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -125,13 +239,28 @@ export type Database = {
         Args: { track_name_param: string }
         Returns: number
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_user_liked_track: {
         Args: { session_id_param: string; track_name_param: string }
         Returns: boolean
       }
+      validate_access_key: {
+        Args: { key_code_param: string }
+        Returns: {
+          access_type: string
+          expires_at: string
+          is_valid: boolean
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -258,6 +387,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
