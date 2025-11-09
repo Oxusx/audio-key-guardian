@@ -1,75 +1,154 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Key, Clock, Infinity, Trash2, Copy, Music } from 'lucide-react';
+import { Upload, Key, Clock, Infinity, Trash2, Copy, Music, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import localforage from 'localforage';
-
-interface AudioFile {
-  id: string;
-  name: string;
-  file: File;
-  uploadDate: Date;
-}
-
-interface CoverArt {
-  id: string;
-  name: string;
-  file: File;
-  uploadDate: Date;
-}
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AccessPassword {
   id: string;
-  password: string;
-  accessType: '24h' | '48h' | 'indefinite';
-  createdAt: Date;
-  expiresAt: Date | null;
-  isActive: boolean;
+  key_code: string;
+  access_type: '24h' | '48h' | 'indefinite';
+  created_at: string;
+  expires_at: string | null;
+  is_active: boolean;
 }
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
-  const [coverArt, setCoverArt] = useState<CoverArt | null>(null);
+  const { user, signOut } = useAuth();
+  const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [passwords, setPasswords] = useState<AccessPassword[]>([]);
   const [selectedAccessType, setSelectedAccessType] = useState<'24h' | '48h' | 'indefinite'>('24h');
   const [investmentBudget, setInvestmentBudget] = useState<number>(0);
+  const [projectName, setProjectName] = useState<string>('Music Project');
+  const [roiPercentage, setRoiPercentage] = useState<number>(20);
+  const [coverArtFile, setCoverArtFile] = useState<File | null>(null);
+  const [coverArtPreview, setCoverArtPreview] = useState<string>('');
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const { toast } = useToast();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (user) {
+      loadAdminData();
+    }
+  }, [user]);
+
+  const loadAdminData = async () => {
+    if (!user) return;
+
+    try {
+      // Load admin settings
+      const { data: settings } = await supabase
+        .from('admin_settings')
+        .select('*')
+        .eq('admin_id', user.id)
+        .single();
+
+      if (settings) {
+        setProjectName(settings.project_name || 'Music Project');
+        setInvestmentBudget(Number(settings.investment_budget) || 0);
+        setRoiPercentage(Number(settings.roi_percentage) || 20);
+        if (settings.cover_art_url) {
+          setCoverArtPreview(settings.cover_art_url);
+        }
+      }
+
+      // Load audio files
+      const { data: files } = await supabase
+        .from('audio_files')
+        .select('*')
+        .eq('admin_id', user.id)
+        .order('created_at', { ascending: true });
+
+      if (files) {
+        setAudioFiles(files);
+      }
+
+      // Load access keys
+      const { data: keys } = await supabase
+        .from('access_keys')
+        .select('*')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (keys) {
+        setPasswords(keys as AccessPassword[]);
+      }
+    } catch (error) {
+      console.error('Error loading admin data:', error);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || !user) return;
 
     const remainingSlots = 5 - audioFiles.length;
-    const filesToUpload = Math.min(files.length, remainingSlots);
-    const filesToAdd = Array.from(files).slice(0, filesToUpload);
-
-    const newFiles: AudioFile[] = filesToAdd.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      file,
-      uploadDate: new Date(),
-    }));
-
-    setAudioFiles(prev => [...prev, ...newFiles]);
-    
-    if (files.length > remainingSlots) {
+    if (remainingSlots <= 0) {
       toast({
-        title: "Upload limit reached",
-        description: `Only ${filesToUpload} file(s) uploaded. Maximum 5 audio files allowed.`,
-        variant: "default",
+        title: 'Upload limit reached',
+        description: 'Maximum 5 audio files allowed.',
+        variant: 'destructive',
       });
-    } else {
+      return;
+    }
+
+    setUploadingFiles(true);
+
+    try {
+      const filesToUpload = Math.min(files.length, remainingSlots);
+      
+      for (let i = 0; i < filesToUpload; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        // Upload to storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('audio-files')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('audio-files')
+          .getPublicUrl(fileName);
+
+        // Save to database
+        const { error: dbError } = await supabase
+          .from('audio_files')
+          .insert({
+            admin_id: user.id,
+            file_name: file.name,
+            file_url: publicUrl,
+          });
+
+        if (dbError) throw dbError;
+      }
+
+      await loadAdminData();
+
       toast({
-        title: "Files uploaded successfully",
-        description: `${filesToUpload} audio file(s) added.`,
+        title: 'Files uploaded',
+        description: `${filesToUpload} audio file(s) uploaded successfully.`,
       });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingFiles(false);
     }
   };
 
@@ -77,74 +156,77 @@ const AdminPanel = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const newCoverArt: CoverArt = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      file,
-      uploadDate: new Date(),
+    setCoverArtFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCoverArtPreview(e.target?.result as string);
     };
+    reader.readAsDataURL(file);
 
-    setCoverArt(newCoverArt);
     toast({
-      title: "Cover art selected",
-      description: "Click 'Save Project Settings' to apply changes.",
+      title: 'Cover art selected',
+      description: 'Click "Save Project Settings" to upload.',
     });
   };
 
-  const fileToDataURL = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
   const handleSaveProjectSettings = async () => {
+    if (!user) return;
+
     try {
-      const savedItems: string[] = [];
+      let coverArtUrl = coverArtPreview;
 
-      // Save cover art to IndexedDB (localforage)
-      if (coverArt) {
-        const coverDataUrl = await fileToDataURL(coverArt.file);
-        await localforage.setItem('projectCoverArt', coverDataUrl);
-        savedItems.push('cover art');
+      // Upload cover art if new file selected
+      if (coverArtFile) {
+        const fileExt = coverArtFile.name.split('.').pop();
+        const fileName = `${user.id}/cover.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('cover-art')
+          .upload(fileName, coverArtFile, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('cover-art')
+          .getPublicUrl(fileName);
+
+        coverArtUrl = publicUrl;
       }
 
-      // Save audio files to IndexedDB, store only metadata in localStorage
-      if (audioFiles.length > 0) {
-        const metadata = audioFiles.map((f) => ({ id: f.id, name: f.name }));
-        await Promise.all(
-          audioFiles.map(async (f) => {
-            const dataUrl = await fileToDataURL(f.file);
-            await localforage.setItem(`audio:${f.id}`, dataUrl);
-          })
-        );
-        localStorage.setItem('projectAudioFiles', JSON.stringify(metadata));
-        savedItems.push('audio files');
-      }
+      // Upsert admin settings
+      const { error } = await supabase
+        .from('admin_settings')
+        .upsert({
+          admin_id: user.id,
+          project_name: projectName,
+          investment_budget: investmentBudget,
+          roi_percentage: roiPercentage,
+          cover_art_url: coverArtUrl,
+        });
 
-      // Save investment budget (small value OK in localStorage)
-      if (investmentBudget > 0) {
-        localStorage.setItem('projectInvestmentBudget', investmentBudget.toString());
-        savedItems.push('investment budget');
-      }
+      if (error) throw error;
 
       toast({
-        title: "✓ Project settings saved",
-        description: `Successfully saved: ${savedItems.join(', ')}. Click 'View Tracklist' below to hear your tracks.`,
+        title: 'Settings saved',
+        description: 'Project settings updated successfully.',
       });
-    } catch (err) {
-      console.error('Error saving project settings', err);
+
+      setCoverArtFile(null);
+      await loadAdminData();
+    } catch (error: any) {
+      console.error('Save error:', error);
       toast({
         title: 'Save failed',
-        description: 'Storage is full or blocked. Try saving fewer or smaller files.',
+        description: error.message,
         variant: 'destructive',
       });
     }
   };
 
-  const generatePassword = () => {
-    const password = Math.random().toString(36).substr(2, 8).toUpperCase();
+  const generatePassword = async () => {
+    if (!user) return;
+
+    const keyCode = Math.random().toString(36).substr(2, 8).toUpperCase();
     const now = new Date();
     let expiresAt: Date | null = null;
 
@@ -154,46 +236,99 @@ const AdminPanel = () => {
       expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
     }
 
-    const newPassword: AccessPassword = {
-      id: Math.random().toString(36).substr(2, 9),
-      password,
-      accessType: selectedAccessType,
-      createdAt: now,
-      expiresAt,
-      isActive: true,
-    };
+    try {
+      const { error } = await supabase
+        .from('access_keys')
+        .insert({
+          key_code: keyCode,
+          access_type: selectedAccessType,
+          created_by: user.id,
+          expires_at: expiresAt?.toISOString(),
+        });
 
-    setPasswords(prev => [...prev, newPassword]);
-    toast({
-      title: "Password generated",
-      description: `New ${selectedAccessType} access password: ${password}`,
-    });
+      if (error) throw error;
+
+      await loadAdminData();
+
+      toast({
+        title: 'Password generated',
+        description: `New ${selectedAccessType} access key: ${keyCode}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Generation failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   const copyPassword = (password: string) => {
     navigator.clipboard.writeText(password);
     toast({
-      title: "Password copied",
-      description: "Password copied to clipboard.",
+      title: 'Key copied',
+      description: 'Access key copied to clipboard.',
     });
   };
 
-  const deleteFile = (id: string) => {
-    setAudioFiles(prev => prev.filter(file => file.id !== id));
-    toast({
-      title: "File deleted",
-      description: "Audio file removed successfully.",
-    });
+  const deleteFile = async (id: string, fileUrl: string) => {
+    try {
+      // Extract file path from URL
+      const urlParts = fileUrl.split('/audio-files/');
+      if (urlParts.length > 1) {
+        const filePath = urlParts[1];
+        await supabase.storage.from('audio-files').remove([filePath]);
+      }
+
+      const { error } = await supabase
+        .from('audio_files')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await loadAdminData();
+
+      toast({
+        title: 'File deleted',
+        description: 'Audio file removed successfully.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Delete failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
-  const deactivatePassword = (id: string) => {
-    setPasswords(prev => prev.map(p => 
-      p.id === id ? { ...p, isActive: false } : p
-    ));
-    toast({
-      title: "Password deactivated",
-      description: "Access password has been deactivated.",
-    });
+  const deactivatePassword = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('access_keys')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await loadAdminData();
+
+      toast({
+        title: 'Key deactivated',
+        description: 'Access key has been deactivated.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Deactivation failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   const getAccessTypeIcon = (type: string) => {
@@ -217,11 +352,17 @@ const AdminPanel = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-            Audio Access Admin Panel
-          </h1>
-          <p className="text-muted-foreground">Manage audio files and user access permissions</p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+              Audio Access Admin Panel
+            </h1>
+            <p className="text-muted-foreground">Manage audio files and user access permissions</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -242,10 +383,10 @@ const AdminPanel = () => {
                 <Input
                   id="audio-upload"
                   type="file"
-                  accept=".wav"
+                  accept=".wav,.mp3"
                   multiple
                   onChange={handleFileUpload}
-                  disabled={audioFiles.length >= 5}
+                  disabled={audioFiles.length >= 5 || uploadingFiles}
                   className="mt-2"
                 />
               </div>
@@ -254,15 +395,15 @@ const AdminPanel = () => {
                 {audioFiles.map((file) => (
                   <div key={file.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
-                      <p className="font-medium">{file.name}</p>
+                      <p className="font-medium">{file.file_name}</p>
                       <p className="text-sm text-muted-foreground">
-                        Uploaded: {file.uploadDate.toLocaleDateString()}
+                        Uploaded: {new Date(file.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteFile(file.id)}
+                      onClick={() => deleteFile(file.id, file.file_url)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -285,20 +426,18 @@ const AdminPanel = () => {
                   onChange={handleCoverArtUpload}
                   className="mt-2"
                 />
-                {coverArt && (
+                {coverArtPreview && (
                   <div className="mt-3 p-3 bg-muted rounded-lg">
                     <div className="flex items-center gap-3">
-                      {coverArt.file && (
-                        <img 
-                          src={URL.createObjectURL(coverArt.file)} 
-                          alt="Cover art preview" 
-                          className="w-16 h-16 object-cover rounded"
-                        />
-                      )}
+                      <img 
+                        src={coverArtPreview} 
+                        alt="Cover art preview" 
+                        className="w-16 h-16 object-cover rounded"
+                      />
                       <div>
-                        <p className="font-medium">{coverArt.name}</p>
+                        <p className="font-medium">Cover Art</p>
                         <p className="text-sm text-muted-foreground">
-                          Uploaded: {coverArt.uploadDate.toLocaleDateString()}
+                          {coverArtFile ? 'New file selected' : 'Current cover'}
                         </p>
                       </div>
                     </div>
@@ -348,19 +487,19 @@ const AdminPanel = () => {
                   <div key={pass.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono font-bold">{pass.password}</span>
-                        <Badge variant={getAccessTypeBadgeVariant(pass.accessType)} className="flex items-center gap-1">
-                          {getAccessTypeIcon(pass.accessType)}
-                          {pass.accessType}
+                        <span className="font-mono font-bold">{pass.key_code}</span>
+                        <Badge variant={getAccessTypeBadgeVariant(pass.access_type)} className="flex items-center gap-1">
+                          {getAccessTypeIcon(pass.access_type)}
+                          {pass.access_type}
                         </Badge>
-                        {!pass.isActive && (
+                        {!pass.is_active && (
                           <Badge variant="destructive">Inactive</Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Created: {pass.createdAt.toLocaleString()}
-                        {pass.expiresAt && (
-                          <span> • Expires: {pass.expiresAt.toLocaleString()}</span>
+                        Created: {new Date(pass.created_at).toLocaleString()}
+                        {pass.expires_at && (
+                          <span> • Expires: {new Date(pass.expires_at).toLocaleString()}</span>
                         )}
                       </p>
                     </div>
@@ -368,11 +507,11 @@ const AdminPanel = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => copyPassword(pass.password)}
+                        onClick={() => copyPassword(pass.key_code)}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      {pass.isActive && (
+                      {pass.is_active && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -394,17 +533,27 @@ const AdminPanel = () => {
           </Card>
         </div>
 
-        {/* Investment Budget */}
+        {/* Project Settings */}
         <Card className="shadow-elegant">
           <CardHeader>
-            <CardTitle>Investment Budget</CardTitle>
+            <CardTitle>Project Settings</CardTitle>
             <CardDescription>
-              Set the total investment budget for merch sales and live concert ticket sales
+              Configure project details and investment parameters
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="project-name">Project Name</Label>
+                <Input
+                  id="project-name"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="Music Project"
+                  className="mt-2"
+                />
+              </div>
+              <div>
                 <Label htmlFor="budget">Investment Budget ($)</Label>
                 <Input
                   id="budget"
@@ -413,13 +562,28 @@ const AdminPanel = () => {
                   step="100"
                   value={investmentBudget}
                   onChange={(e) => setInvestmentBudget(Number(e.target.value))}
-                  placeholder="Enter total budget"
+                  placeholder="10000"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="roi">Expected ROI (%)</Label>
+                <Input
+                  id="roi"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={roiPercentage}
+                  onChange={(e) => setRoiPercentage(Number(e.target.value))}
+                  placeholder="20"
                   className="mt-2"
                 />
               </div>
             </div>
+
             {investmentBudget > 0 && (
-              <div className="mt-4 p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-muted rounded-lg">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Admin Investment (51%)</p>
@@ -432,6 +596,14 @@ const AdminPanel = () => {
                 </div>
               </div>
             )}
+
+            <Button 
+              onClick={handleSaveProjectSettings}
+              className="w-full"
+              variant="gradient"
+            >
+              Save Project Settings
+            </Button>
           </CardContent>
         </Card>
 
@@ -447,42 +619,22 @@ const AdminPanel = () => {
                 <p className="text-sm text-muted-foreground">Audio Files</p>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-2xl font-bold text-primary">{passwords.filter(p => p.isActive).length}</p>
-                <p className="text-sm text-muted-foreground">Active Passwords</p>
+                <p className="text-2xl font-bold text-primary">{passwords.filter(p => p.is_active).length}</p>
+                <p className="text-sm text-muted-foreground">Active Keys</p>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-2xl font-bold text-primary">
-                  {passwords.filter(p => p.accessType === 'indefinite' && p.isActive).length}
+                  {passwords.filter(p => p.access_type === 'indefinite' && p.is_active).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Indefinite Access</p>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-2xl font-bold text-primary">
-                  {passwords.filter(p => (p.accessType === '24h' || p.accessType === '48h') && p.isActive).length}
+                  {passwords.filter(p => (p.access_type === '24h' || p.access_type === '48h') && p.is_active).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Temporary Access</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Save Project Settings */}
-        <Card className="shadow-elegant">
-          <CardHeader>
-            <CardTitle>Save Project Settings</CardTitle>
-            <CardDescription>
-              Save your uploaded files and settings to see them on the user side
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={handleSaveProjectSettings}
-              className="w-full"
-              variant="gradient"
-              disabled={!coverArt && audioFiles.length === 0 && investmentBudget <= 0}
-            >
-              Save Project Settings
-            </Button>
           </CardContent>
         </Card>
 

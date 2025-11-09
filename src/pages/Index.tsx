@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Volume2, Settings, Unlock, Pause, SkipForward, Key, Heart } from 'lucide-react';
+import { Play, Volume2, Settings, Unlock, Pause, SkipForward, Key, Heart, Music } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAudio } from '@/contexts/AudioContext';
@@ -33,50 +33,49 @@ const Index = () => {
   const [trackLikes, setTrackLikes] = useState<Record<string, number>>({});
   const [userLikes, setUserLikes] = useState<Set<string>>(new Set());
   const [userSessionId, setUserSessionId] = useState<string>('');
+  const [projectName, setProjectName] = useState('Music Project');
+  const [totalBudget, setTotalBudget] = useState(10000);
   const { toast } = useToast();
 
   // Mock audio files - will be replaced by uploaded files if available
-  const defaultAudioFiles: AudioFile[] = [
-    { id: '1', name: 'Track 1.wav', duration: '3:45', size: '8.2 MB' },
-    { id: '2', name: 'Track 2.wav', duration: '4:12', size: '9.1 MB' },
-    { id: '3', name: 'Track 3.wav', duration: '2:58', size: '6.8 MB' },
-    { id: '4', name: 'Track 4.wav', duration: '5:23', size: '11.4 MB' },
-    { id: '5', name: 'Track 5.wav', duration: '3:17', size: '7.5 MB' },
-  ];
+  const defaultAudioFiles: AudioFile[] = [];
 
   const audioFiles = savedAudioFiles.length > 0 
-    ? savedAudioFiles.map((file, index) => ({
+    ? savedAudioFiles.map((file) => ({
         id: file.id,
-        name: file.name,
-        duration: '0:00', // Will be calculated when loaded
-        size: 'Uploaded'
+        name: file.file_name,
+        duration: file.duration || '0:00',
+        size: file.file_size || 'Uploaded'
       }))
     : defaultAudioFiles;
 
-  // Mock password validation - in real app, this would be server-side
-  const validatePassword = (inputPassword: string) => {
-    // Simulate some valid passwords for demo
-    const validPasswords = [
-      { password: 'DEMO24H', accessType: '24h' as const, hours: 24 },
-      { password: 'DEMO48H', accessType: '48h' as const, hours: 48 },
-      { password: 'DEMOINF', accessType: 'indefinite' as const, hours: null },
-    ];
+  // Validate password against database
+  const validatePassword = async (inputPassword: string) => {
+    try {
+      const { data, error } = await supabase.rpc('validate_access_key', {
+        key_code_param: inputPassword.toUpperCase()
+      });
 
-    const found = validPasswords.find(p => p.password === inputPassword.toUpperCase());
-    if (found) {
-      const now = new Date();
-      const expiresAt = found.hours ? new Date(now.getTime() + found.hours * 60 * 60 * 1000) : null;
-      
-      return {
-        accessType: found.accessType,
-        expiresAt,
-        isValid: true,
-      };
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const result = data[0];
+        if (result.is_valid) {
+          return {
+            accessType: result.access_type as '24h' | '48h' | 'indefinite',
+            expiresAt: result.expires_at ? new Date(result.expires_at) : null,
+            isValid: true,
+          };
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Key validation error:', error);
+      return null;
     }
-    return null;
   };
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!password.trim()) {
@@ -88,7 +87,7 @@ const Index = () => {
       return;
     }
 
-    const accessData = validatePassword(password);
+    const accessData = await validatePassword(password);
     
     if (accessData) {
       setAccessInfo(accessData);
@@ -137,7 +136,19 @@ const Index = () => {
   const playAudio = async (fileId: string) => {
     const selectedTrack = audioFiles.find(f => f.id === fileId);
     if (!selectedTrack) return;
-    await audio.playTrack(selectedTrack);
+    
+    // Get the actual file URL from database
+    const dbFile = savedAudioFiles.find(f => f.id === fileId);
+    if (dbFile && dbFile.file_url) {
+      // Create audio file object with the URL
+      const trackWithUrl = {
+        ...selectedTrack,
+        url: dbFile.file_url
+      };
+      await audio.playTrack(trackWithUrl);
+    } else {
+      await audio.playTrack(selectedTrack);
+    }
   };
 
   const togglePlayPause = () => {
@@ -278,38 +289,45 @@ const Index = () => {
     return () => clearInterval(interval);
   }, [accessInfo]);
 
-  // Load saved cover art and audio metadata
+  // Load saved cover art and audio files from database
   useEffect(() => {
     (async () => {
       try {
-        // Check IndexedDB first for cover art
-        const coverFromDB = await localforage.getItem<string>('projectCoverArt');
-        if (coverFromDB) {
-          setCoverArt(coverFromDB);
-        } else {
-          // Fallback to localStorage
-          const savedCover = localStorage.getItem('projectCoverArt');
-          if (savedCover) {
-            setCoverArt(savedCover);
+        // Load admin settings to get cover art and project details
+        const { data: settings } = await supabase
+          .from('admin_settings')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (settings) {
+          if (settings.cover_art_url) {
+            setCoverArt(settings.cover_art_url);
           } else {
             setCoverArt(defaultCover);
           }
+          setProjectName(settings.project_name || 'Music Project');
+          setTotalBudget(Number(settings.investment_budget) || 10000);
+          
+          // Store in localStorage for investment page
+          localStorage.setItem('projectName', settings.project_name || 'Music Project');
+          localStorage.setItem('totalBudget', String(settings.investment_budget || 10000));
+        } else {
+          setCoverArt(defaultCover);
         }
 
-        // Load saved audio metadata (ids and names)
-        const savedAudio = localStorage.getItem('projectAudioFiles');
-        console.log('Loading from localStorage - projectAudioFiles:', savedAudio ? 'Found' : 'Not found');
-        if (savedAudio) {
-          try {
-            const parsedAudio = JSON.parse(savedAudio);
-            console.log('Loaded audio files metadata:', parsedAudio);
-            setSavedAudioFiles(parsedAudio);
-          } catch (e) {
-            console.error('Error loading saved audio metadata:', e);
-          }
+        // Load audio files from database
+        const { data: files } = await supabase
+          .from('audio_files')
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (files && files.length > 0) {
+          setSavedAudioFiles(files);
         }
       } catch (err) {
-        console.error('Error initializing media from storage:', err);
+        console.error('Error loading media:', err);
+        setCoverArt(defaultCover);
       }
     })();
   }, []);
@@ -327,15 +345,9 @@ const Index = () => {
       <div className="min-h-screen bg-background relative">
         {/* Admin Login Button - Top Right */}
         <div className="absolute top-6 right-6">
-          <Link to="/admin">
+          <Link to="/auth">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <Settings className="h-4 w-4" />
-            </Button>
-          </Link>
-          <Link to="/artist-keys">
-            <Button variant="outline" size="sm">
-              <Key className="h-4 w-4 mr-2" />
-              Artist Keys
             </Button>
           </Link>
         </div>
@@ -368,15 +380,9 @@ const Index = () => {
     <div className="min-h-screen bg-background relative">
       {/* Admin Login Button - Top Right */}
       <div className="absolute top-4 right-4 z-10">
-        <Link to="/admin">
+        <Link to="/auth">
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Settings className="h-4 w-4" />
-          </Button>
-        </Link>
-        <Link to="/artist-keys" className="ml-2">
-          <Button variant="outline" size="sm">
-            <Key className="h-4 w-4 mr-2" />
-            Artist Keys
           </Button>
         </Link>
       </div>
@@ -398,46 +404,54 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Track List */}
-      <div className="px-6 pb-32">
-        <div className="max-w-3xl mx-auto space-y-1">
-            {audioFiles.map((file, index) => (
-              <div
-                key={file.id}
-                className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
-                  audio.currentTrack?.id === file.id ? 'bg-primary/10' : 'hover:bg-muted/30'
-                }`}
-                onClick={() => playAudio(file.id)}
-              >
-                <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <p className={`font-medium truncate ${
-                    audio.currentTrack?.id === file.id ? 'text-primary' : 'text-foreground'
-                  }`}>
-                    {file.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {file.duration}
-                  </p>
-                </div>
-                <button
-                  onClick={(e) => handleLike(file.name, e)}
-                  className={`flex items-center gap-1 transition-colors shrink-0 ${
-                    userLikes.has(file.name) 
-                      ? 'text-red-500' 
-                      : 'text-muted-foreground hover:text-red-500'
-                  }`}
-                >
-                  <Heart 
-                    className="h-4 w-4" 
-                    fill={userLikes.has(file.name) ? 'currentColor' : 'none'}
-                  />
-                  <span className="text-xs">{trackLikes[file.name] || 0}</span>
-                </button>
-                <Play className="h-5 w-5 text-muted-foreground shrink-0" />
+        {/* Track List */}
+        <div className="px-6 pb-32">
+          <div className="max-w-3xl mx-auto space-y-1">
+            {audioFiles.length === 0 ? (
+              <div className="text-center py-12">
+                <Music className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg mb-2">No tracks available yet</p>
+                <p className="text-sm text-muted-foreground">The admin hasn't uploaded any audio files yet.</p>
               </div>
-            ))}
-        </div>
+            ) : (
+              audioFiles.map((file, index) => (
+                <div
+                  key={file.id}
+                  className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
+                    audio.currentTrack?.id === file.id ? 'bg-primary/10' : 'hover:bg-muted/30'
+                  }`}
+                  onClick={() => playAudio(file.id)}
+                >
+                  <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-medium truncate ${
+                      audio.currentTrack?.id === file.id ? 'text-primary' : 'text-foreground'
+                    }`}>
+                      {file.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {file.duration}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => handleLike(file.name, e)}
+                    className={`flex items-center gap-1 transition-colors shrink-0 ${
+                      userLikes.has(file.name) 
+                        ? 'text-red-500' 
+                        : 'text-muted-foreground hover:text-red-500'
+                    }`}
+                  >
+                    <Heart 
+                      className="h-4 w-4" 
+                      fill={userLikes.has(file.name) ? 'currentColor' : 'none'}
+                    />
+                    <span className="text-xs">{trackLikes[file.name] || 0}</span>
+                  </button>
+                  <Play className="h-5 w-5 text-muted-foreground shrink-0" />
+                </div>
+              ))
+            )}
+          </div>
         
         {/* Invest Button */}
         <div className="max-w-3xl mx-auto mt-8">

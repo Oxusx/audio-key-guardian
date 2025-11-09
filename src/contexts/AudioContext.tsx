@@ -6,6 +6,7 @@ interface AudioFile {
   name: string;
   duration: string;
   size: string;
+  url?: string;
 }
 
 interface AudioContextType {
@@ -117,8 +118,12 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
     if (!audioRef.current) return;
     
     try {
-      const stored = await localforage.getItem<string>(`audio:${track.id}`);
-      const src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      // Use the URL from the track if available, otherwise try localforage for backward compatibility
+      let src = track.url;
+      if (!src) {
+        const stored = await localforage.getItem<string>(`audio:${track.id}`);
+        src = stored || 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+      }
       
       // Only change src if it's a different track
       if (currentTrack?.id !== track.id) {
