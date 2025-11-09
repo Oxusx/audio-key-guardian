@@ -179,6 +179,17 @@ const Auth = () => {
               <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => navigate('/reset-password')}
+                  className="text-sm text-muted-foreground"
+                >
+                  Forgot your password?
+                </Button>
+              </div>
             </form>
           </TabsContent>
 

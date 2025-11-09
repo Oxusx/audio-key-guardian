@@ -163,6 +163,30 @@ export type Database = {
           },
         ]
       }
+      investment_sessions: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          last_accessed: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          last_accessed?: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          last_accessed?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
       investments: {
         Row: {
           amount: number

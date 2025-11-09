@@ -6,12 +6,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AudioProvider } from "./contexts/AudioContext";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
+import Dashboard from "./pages/Dashboard";
 import User from "./pages/User";
 import Investment from "./pages/Investment";
 import Contracts from "./pages/Contracts";
 import ArtistKeys from "./pages/ArtistKeys";
 import Player from "./pages/Player";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,7 +28,9 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/user" element={<User />} />
             <Route path="/investment" element={<Investment />} />
             <Route path="/contracts" element={<Contracts />} />

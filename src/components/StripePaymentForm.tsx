@@ -199,13 +199,40 @@ Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long',
       }
 
       // Send confirmation email with contract
-      await supabase.functions.invoke('send-investment-confirmation', {
-        body: {
-          email: sanitizedEmail,
-          amount,
-          projectName: sanitizedProjectName,
-          contractTerms,
-        },
+      const emailPromises = [];
+      
+      // Send investor confirmation
+      emailPromises.push(
+        supabase.functions.invoke('send-investment-confirmation', {
+          body: {
+            email: sanitizedEmail,
+            amount,
+            projectName: sanitizedProjectName,
+            contractTerms,
+          },
+        })
+      );
+
+      // Send admin notification - use admin email from contract
+      const { data: totalData } = await supabase.rpc('get_total_investments');
+      const totalRaised = Number(totalData) || 0;
+
+      emailPromises.push(
+        supabase.functions.invoke('send-admin-notification', {
+          body: {
+            adminEmail: sanitizedAdminEmail,
+            investorEmail: sanitizedEmail,
+            amount,
+            projectName: sanitizedProjectName,
+            totalRaised,
+          },
+        })
+      );
+
+      // Send emails (don't wait for them to complete)
+      Promise.all(emailPromises).catch(error => {
+        console.error('Email notification error:', error);
+        // Don't fail the payment if emails fail
       });
 
       toast({

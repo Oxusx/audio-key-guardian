@@ -23,8 +23,20 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) {
-      console.error("RESEND_API_KEY is not configured");
-      throw new Error("Email system is not configured. Investment recorded but confirmation email cannot be sent.");
+      console.log("RESEND_API_KEY not configured - email notification skipped");
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: "Email service not configured yet. Investment recorded successfully." 
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
     }
 
     const resend = new Resend(resendKey);
