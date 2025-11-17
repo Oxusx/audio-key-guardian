@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, MoreHorizontal, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Heart } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Heart, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Slider } from '@/components/ui/slider';
 import { useAudio } from '@/contexts/AudioContext';
+import { useToast } from '@/hooks/use-toast';
+import { useActivityTracking } from '@/hooks/useActivityTracking';
 import defaultCover from '@/assets/cover-art.jpeg';
 import localforage from 'localforage';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,8 @@ const Player = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const audio = useAudio();
+  const { toast } = useToast();
+  const { logActivity } = useActivityTracking();
   const { allTracks } = location.state || {};
   
   const [coverArt, setCoverArt] = useState<string>(defaultCover);
@@ -28,6 +32,7 @@ const Player = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
   const [userSessionId, setUserSessionId] = useState<string>('');
+  const [accessExpiresAt, setAccessExpiresAt] = useState<Date | null>(null);
 
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 150;
@@ -45,11 +50,24 @@ const Player = () => {
           if (localCover) setCoverArt(localCover);
         }
         
-        // Load user session ID
+        // Load user session ID and access info
         const storedAccess = localStorage.getItem('audioAccessInfo');
         if (storedAccess) {
           const accessData = JSON.parse(storedAccess);
           setUserSessionId(accessData.sessionId || '');
+          
+          // Check if access has expired
+          if (accessData.expiresAt) {
+            const expiresAt = new Date(accessData.expiresAt);
+            const now = new Date();
+            
+            if (now > expiresAt) {
+              // Access expired, logout and redirect
+              handleLogout();
+            } else {
+              setAccessExpiresAt(expiresAt);
+            }
+          }
         }
       } catch (err) {
         console.error('Error loading cover art:', err);
@@ -64,6 +82,12 @@ const Player = () => {
       checkIfLiked();
     }
   }, [audio.currentTrack, userSessionId]);
+
+  // Check access expiry every minute
+  useEffect(() => {
+    const interval = setInterval(checkAccessExpiry, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [accessExpiresAt]);
 
   const handlePrevious = async () => {
     if (!allTracks) return;
@@ -88,6 +112,41 @@ const Player = () => {
     const minutes = Math.floor(remaining / 60);
     const seconds = Math.floor(remaining % 60);
     return `-${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleLogout = () => {
+    logActivity({
+      action_type: 'access_expired',
+      action_details: { reason: 'automatic', expiresAt: accessExpiresAt },
+    });
+    localStorage.removeItem('audioAccessInfo');
+    toast({
+      title: "Access expired",
+      description: "Your access has expired. Please enter a new access key.",
+    });
+    navigate('/');
+  };
+
+  const handleManualLogout = () => {
+    logActivity({
+      action_type: 'user_logout',
+      action_details: { reason: 'manual', from: 'player' },
+    });
+    localStorage.removeItem('audioAccessInfo');
+    toast({
+      title: "Logged out",
+      description: "You've been logged out. Enter a new key to access different content.",
+    });
+    navigate('/');
+  };
+
+  const checkAccessExpiry = () => {
+    if (accessExpiresAt) {
+      const now = new Date();
+      if (now > accessExpiresAt) {
+        handleLogout();
+      }
+    }
   };
 
   const handleLike = async () => {
@@ -194,6 +253,15 @@ const Player = () => {
           <ChevronDown className="h-6 w-6" />
         </Button>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleManualLogout}
+            className="text-foreground"
+            title="Logout and enter new key"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
           <Button variant="ghost" size="sm">
             <MoreHorizontal className="h-6 w-6" />
           </Button>

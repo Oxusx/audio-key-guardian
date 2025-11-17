@@ -5,6 +5,8 @@ import { Play, Volume2, Settings, Unlock, Pause, SkipForward, Key, Heart, Music 
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAudio } from '@/contexts/AudioContext';
+import { useActivityTracking } from '@/hooks/useActivityTracking';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import defaultCover from '@/assets/cover-art.jpeg';
 import localforage from 'localforage';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +27,9 @@ interface AccessInfo {
 const Index = () => {
   const navigate = useNavigate();
   const audio = useAudio();
+  const { toast } = useToast();
+  const { logActivity } = useActivityTracking();
+  const { trackEvent } = useAnalytics();
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessInfo, setAccessInfo] = useState<AccessInfo | null>(null);
@@ -35,7 +40,6 @@ const Index = () => {
   const [userSessionId, setUserSessionId] = useState<string>('');
   const [projectName, setProjectName] = useState('Music Project');
   const [totalBudget, setTotalBudget] = useState(10000);
-  const { toast } = useToast();
 
   // Mock audio files - will be replaced by uploaded files if available
   const defaultAudioFiles: AudioFile[] = [];
@@ -104,11 +108,33 @@ const Index = () => {
         sessionId,
       }));
       
+      // Track access key entry
+      trackEvent({
+        event_type: 'access_key_entered',
+        event_data: { 
+          accessType: accessData.accessType,
+          expiresAt: accessData.expiresAt?.toISOString() || null
+        },
+      });
+
+      logActivity({
+        action_type: 'access_granted',
+        action_details: { 
+          accessType: accessData.accessType,
+          expiresAt: accessData.expiresAt?.toISOString() || null 
+        },
+      });
+      
       toast({
         title: "Access granted",
         description: `${accessData.accessType} access activated successfully.`,
       });
     } else {
+      trackEvent({
+        event_type: 'access_key_failed',
+        event_data: { attempted: true },
+      });
+      
       toast({
         title: "Invalid password",
         description: "The password you entered is not valid or has expired.",
@@ -121,6 +147,14 @@ const Index = () => {
     if (accessInfo && accessInfo.expiresAt) {
       const now = new Date();
       if (now > accessInfo.expiresAt) {
+        logActivity({
+          action_type: 'access_expired',
+          action_details: { 
+            accessType: accessInfo.accessType,
+            expiresAt: accessInfo.expiresAt.toISOString()
+          },
+        });
+        
         setIsAuthenticated(false);
         setAccessInfo(null);
         localStorage.removeItem('audioAccessInfo');
@@ -170,6 +204,11 @@ const Index = () => {
   };
 
   const logout = () => {
+    logActivity({
+      action_type: 'user_logout',
+      action_details: { reason: 'manual', from: 'index' },
+    });
+    
     setIsAuthenticated(false);
     setAccessInfo(null);
     setPassword('');
