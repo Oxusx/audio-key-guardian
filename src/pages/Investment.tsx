@@ -10,12 +10,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/StripePaymentForm';
+import { useActivityTracking } from '@/hooks/useActivityTracking';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 const Investment = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { logActivity } = useActivityTracking();
+  const { trackEvent } = useAnalytics();
   const [email, setEmail] = useState('');
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,6 +58,12 @@ const Investment = () => {
     e.preventDefault();
 
     const investmentAmount = parseFloat(amount);
+
+    // Track form submission attempt
+    trackEvent({
+      event_type: 'investment_form_submit',
+      event_data: { amount: investmentAmount, has_email: !!email },
+    });
 
     // Validation
     if (!email || !amount) {
@@ -102,6 +112,17 @@ const Investment = () => {
 
     try {
       const investmentAmount = parseFloat(amount);
+
+      // Track payment initiation
+      trackEvent({
+        event_type: 'payment_initiated',
+        event_data: { amount: investmentAmount, project: projectName },
+      });
+
+      logActivity({
+        action_type: 'payment_initiated',
+        action_details: { amount: investmentAmount, email, project: projectName },
+      });
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

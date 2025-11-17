@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Key, Clock, Infinity, Trash2, Copy, Music, LogOut, FileText } from 'lucide-react';
+import { Upload, Key, Clock, Infinity, Trash2, Copy, Music, LogOut, FileText, BarChart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -360,6 +360,10 @@ const AdminPanel = () => {
             <p className="text-muted-foreground">Manage audio files and user access permissions</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/analytics')}>
+              <BarChart className="h-4 w-4 mr-2" />
+              Analytics
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
               <FileText className="h-4 w-4 mr-2" />
               View Dashboard
