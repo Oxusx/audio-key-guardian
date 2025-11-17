@@ -44,6 +44,42 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_logs: {
+        Row: {
+          action_details: Json | null
+          action_type: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          page_url: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_details?: Json | null
+          action_type: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          page_url?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_details?: Json | null
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          page_url?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_settings: {
         Row: {
           admin_id: string
@@ -74,6 +110,48 @@ export type Database = {
           project_name?: string | null
           roi_percentage?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      analytics_events: {
+        Row: {
+          browser: string | null
+          country: string | null
+          created_at: string | null
+          device_type: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          page_url: string | null
+          referrer: string | null
+          user_id: string | null
+          user_session_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          country?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          page_url?: string | null
+          referrer?: string | null
+          user_id?: string | null
+          user_session_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          country?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          page_url?: string | null
+          referrer?: string | null
+          user_id?: string | null
+          user_session_id?: string | null
         }
         Relationships: []
       }
@@ -163,6 +241,39 @@ export type Database = {
           },
         ]
       }
+      data_deletion_requests: {
+        Row: {
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          request_type: string
+          requested_at: string | null
+          status: string | null
+          user_email: string
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          request_type: string
+          requested_at?: string | null
+          status?: string | null
+          user_email: string
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          request_type?: string
+          requested_at?: string | null
+          status?: string | null
+          user_email?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       investment_sessions: {
         Row: {
           created_at: string
@@ -229,6 +340,45 @@ export type Database = {
           id?: string
           track_name?: string
           user_session_id?: string
+        }
+        Relationships: []
+      }
+      user_consents: {
+        Row: {
+          consent_given: boolean
+          consent_text: string | null
+          consent_type: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          session_id: string | null
+          updated_at: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          consent_given?: boolean
+          consent_text?: string | null
+          consent_type: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          session_id?: string | null
+          updated_at?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          consent_given?: boolean
+          consent_text?: string | null
+          consent_type?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          session_id?: string | null
+          updated_at?: string | null
+          user_email?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
