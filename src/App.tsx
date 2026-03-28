@@ -18,6 +18,8 @@ import ResetPassword from "./pages/ResetPassword";
 import Analytics from "./pages/Analytics";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
+import ArtistDashboard from "./pages/ArtistDashboard";
+import ArtistPage from "./pages/ArtistPage";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +42,8 @@ const App = () => (
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/artist-keys" element={<ArtistKeys />} />
             <Route path="/player" element={<Player />} />
+            <Route path="/artist-dashboard" element={<ArtistDashboard />} />
+            <Route path="/:username" element={<ArtistPage />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/privacy" element={<Privacy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
