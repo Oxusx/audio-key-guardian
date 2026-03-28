@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { User, Globe, Instagram, Twitter, Youtube, Link as LinkIcon } from 'lucide-react';
+import { User, Globe, Instagram, Twitter, Youtube } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -50,7 +50,7 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
 
   const loadProfile = async () => {
     try {
-      const { data, error } = await supabase
+      const { data } = await (supabase as any)
         .from('artist_profiles')
         .select('*')
         .eq('user_id', userId)
@@ -62,7 +62,7 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
           username: data.username,
           display_name: data.display_name,
           bio: data.bio || '',
-          social_links: (data.social_links as any) || {},
+          social_links: data.social_links || {},
           is_public: data.is_public ?? true,
           require_key: data.require_key ?? true,
           profile_image_url: data.profile_image_url || undefined,
@@ -76,21 +76,12 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
 
   const handleSave = async () => {
     if (!profile.username.trim() || !profile.display_name.trim()) {
-      toast({
-        title: 'Missing fields',
-        description: 'Username and display name are required.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Missing fields', description: 'Username and display name are required.', variant: 'destructive' });
       return;
     }
 
-    // Validate username format
     if (!/^[a-zA-Z0-9_-]+$/.test(profile.username)) {
-      toast({
-        title: 'Invalid username',
-        description: 'Username can only contain letters, numbers, hyphens, and underscores.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Invalid username', description: 'Only letters, numbers, hyphens, and underscores allowed.', variant: 'destructive' });
       return;
     }
 
@@ -104,13 +95,10 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
         const { error: uploadError } = await supabase.storage
           .from('cover-art')
           .upload(fileName, profileImageFile, { upsert: true });
-
         if (uploadError) throw uploadError;
-
         const { data: { publicUrl } } = supabase.storage
           .from('cover-art')
           .getPublicUrl(fileName);
-
         profileImageUrl = publicUrl;
       }
 
@@ -128,14 +116,14 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
 
       let result;
       if (profile.id) {
-        result = await supabase
+        result = await (supabase as any)
           .from('artist_profiles')
           .update(profileData)
           .eq('id', profile.id)
           .select()
           .single();
       } else {
-        result = await supabase
+        result = await (supabase as any)
           .from('artist_profiles')
           .insert(profileData)
           .select()
@@ -145,7 +133,7 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
       if (result.error) throw result.error;
 
       toast({ title: 'Profile saved', description: 'Your artist profile has been updated.' });
-      onProfileSaved(result.data as any);
+      onProfileSaved(result.data);
       setProfileImageFile(null);
     } catch (error: any) {
       toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
@@ -215,7 +203,6 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
           />
         </div>
 
-        {/* Social Links */}
         <div className="space-y-3">
           <Label>Social Links</Label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -223,10 +210,7 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
               <Instagram className="h-4 w-4 text-muted-foreground shrink-0" />
               <Input
                 value={profile.social_links.instagram || ''}
-                onChange={(e) => setProfile(p => ({
-                  ...p,
-                  social_links: { ...p.social_links, instagram: e.target.value }
-                }))}
+                onChange={(e) => setProfile(p => ({ ...p, social_links: { ...p.social_links, instagram: e.target.value } }))}
                 placeholder="Instagram URL"
               />
             </div>
@@ -234,10 +218,7 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
               <Twitter className="h-4 w-4 text-muted-foreground shrink-0" />
               <Input
                 value={profile.social_links.twitter || ''}
-                onChange={(e) => setProfile(p => ({
-                  ...p,
-                  social_links: { ...p.social_links, twitter: e.target.value }
-                }))}
+                onChange={(e) => setProfile(p => ({ ...p, social_links: { ...p.social_links, twitter: e.target.value } }))}
                 placeholder="Twitter/X URL"
               />
             </div>
@@ -245,10 +226,7 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
               <Youtube className="h-4 w-4 text-muted-foreground shrink-0" />
               <Input
                 value={profile.social_links.youtube || ''}
-                onChange={(e) => setProfile(p => ({
-                  ...p,
-                  social_links: { ...p.social_links, youtube: e.target.value }
-                }))}
+                onChange={(e) => setProfile(p => ({ ...p, social_links: { ...p.social_links, youtube: e.target.value } }))}
                 placeholder="YouTube URL"
               />
             </div>
@@ -256,17 +234,13 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
               <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
               <Input
                 value={profile.social_links.website || ''}
-                onChange={(e) => setProfile(p => ({
-                  ...p,
-                  social_links: { ...p.social_links, website: e.target.value }
-                }))}
+                onChange={(e) => setProfile(p => ({ ...p, social_links: { ...p.social_links, website: e.target.value } }))}
                 placeholder="Website URL"
               />
             </div>
           </div>
         </div>
 
-        {/* Toggles */}
         <div className="space-y-3 border-t pt-4">
           <div className="flex items-center justify-between">
             <div>
@@ -281,7 +255,7 @@ const ArtistProfileForm = ({ userId, onProfileSaved }: ArtistProfileFormProps) =
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-sm">Require Access Key for Music</p>
-              <p className="text-xs text-muted-foreground">Users need a key to play your private tracks</p>
+              <p className="text-xs text-muted-foreground">Users need a key to play private tracks</p>
             </div>
             <Switch
               checked={profile.require_key}

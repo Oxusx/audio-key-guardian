@@ -12,12 +12,12 @@ import { supabase } from '@/integrations/supabase/client';
 interface AccessKey {
   id: string;
   key_code: string;
-  access_type: '24h' | '48h' | 'indefinite';
+  access_type: string;
   created_at: string;
   expires_at: string | null;
   is_active: boolean;
-  includes_merch: boolean;
-  artist_profile_id: string | null;
+  includes_merch?: boolean;
+  artist_profile_id?: string | null;
 }
 
 interface KeyGeneratorWithMerchProps {
@@ -32,21 +32,16 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
   const [selectedAccessType, setSelectedAccessType] = useState<'24h' | '48h' | 'indefinite'>('24h');
   const [includesMerch, setIncludesMerch] = useState(false);
 
-  useEffect(() => {
-    loadKeys();
-  }, [userId]);
+  useEffect(() => { loadKeys(); }, [userId]);
 
   const loadKeys = async () => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('access_keys')
         .select('*')
         .eq('created_by', userId)
         .order('created_at', { ascending: false });
-
-      if (data) {
-        setKeys(data as AccessKey[]);
-      }
+      if (data) setKeys(data as unknown as AccessKey[]);
     } catch (err) {
       console.error('Error loading keys:', err);
     }
@@ -57,11 +52,8 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
     const now = new Date();
     let expiresAt: Date | null = null;
 
-    if (selectedAccessType === '24h') {
-      expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    } else if (selectedAccessType === '48h') {
-      expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-    }
+    if (selectedAccessType === '24h') expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    else if (selectedAccessType === '48h') expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
     try {
       const insertData: any = {
@@ -71,22 +63,12 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
         expires_at: expiresAt?.toISOString() || null,
         includes_merch: includesMerch,
       };
+      if (artistProfileId) insertData.artist_profile_id = artistProfileId;
 
-      if (artistProfileId) {
-        insertData.artist_profile_id = artistProfileId;
-      }
-
-      const { error } = await supabase
-        .from('access_keys')
-        .insert(insertData);
-
+      const { error } = await supabase.from('access_keys').insert(insertData);
       if (error) throw error;
 
-      toast({
-        title: 'Key generated',
-        description: `${selectedAccessType} key: ${keyCode}${includesMerch ? ' (with merch)' : ''}`,
-      });
-
+      toast({ title: 'Key generated', description: `${selectedAccessType} key: ${keyCode}${includesMerch ? ' (with merch)' : ''}` });
       await loadKeys();
     } catch (error: any) {
       toast({ title: 'Generation failed', description: error.message, variant: 'destructive' });
@@ -100,22 +82,13 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
 
   const deactivateKey = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('access_keys')
-        .update({ is_active: false })
-        .eq('id', id);
-
+      const { error } = await supabase.from('access_keys').update({ is_active: false }).eq('id', id);
       if (error) throw error;
       toast({ title: 'Key deactivated' });
       await loadKeys();
     } catch (error: any) {
       toast({ title: 'Failed', description: error.message, variant: 'destructive' });
     }
-  };
-
-  const getAccessTypeIcon = (type: string) => {
-    if (type === 'indefinite') return <Infinity className="h-3.5 w-3.5" />;
-    return <Clock className="h-3.5 w-3.5" />;
   };
 
   return (
@@ -125,17 +98,13 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
           <Key className="h-5 w-5" />
           Access Keys
         </CardTitle>
-        <CardDescription>
-          Generate keys for private music access{includesMerch ? ' with merch' : ''}
-        </CardDescription>
+        <CardDescription>Generate keys for private music access</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <Label>Access Duration</Label>
           <Select value={selectedAccessType} onValueChange={(v: any) => setSelectedAccessType(v)}>
-            <SelectTrigger className="mt-1">
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="24h">24 Hours</SelectItem>
               <SelectItem value="48h">48 Hours</SelectItem>
@@ -155,12 +124,7 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
           <Switch checked={includesMerch} onCheckedChange={setIncludesMerch} />
         </div>
 
-        <Button
-          onClick={generateKey}
-          className="w-full"
-          variant="gradient"
-          disabled={!hasAudioFiles}
-        >
+        <Button onClick={generateKey} className="w-full" variant="gradient" disabled={!hasAudioFiles}>
           Generate Key {includesMerch ? '(Music + Merch)' : '(Music Only)'}
         </Button>
 
@@ -171,13 +135,12 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono font-bold text-sm">{k.key_code}</span>
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                    {getAccessTypeIcon(k.access_type)}
+                    {k.access_type === 'indefinite' ? <Infinity className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
                     {k.access_type}
                   </Badge>
                   {k.includes_merch && (
                     <Badge variant="outline" className="text-xs">
-                      <ShoppingBag className="h-3 w-3 mr-1" />
-                      Merch
+                      <ShoppingBag className="h-3 w-3 mr-1" /> Merch
                     </Badge>
                   )}
                   {!k.is_active && <Badge variant="destructive" className="text-xs">Inactive</Badge>}
@@ -188,9 +151,7 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
                 </p>
               </div>
               <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="sm" onClick={() => copyKey(k.key_code)}>
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
+                <Button variant="ghost" size="sm" onClick={() => copyKey(k.key_code)}><Copy className="h-3.5 w-3.5" /></Button>
                 {k.is_active && (
                   <Button variant="ghost" size="sm" onClick={() => deactivateKey(k.id)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />

@@ -28,31 +28,21 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
   const [items, setItems] = useState<MerchItem[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState<MerchItem>({
-    name: '',
-    description: '',
-    price: 0,
-    image_url: '',
-    external_link: '',
-    is_available: true,
+    name: '', description: '', price: 0, image_url: '', external_link: '', is_available: true,
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadMerch();
-  }, [artistProfileId]);
+  useEffect(() => { loadMerch(); }, [artistProfileId]);
 
   const loadMerch = async () => {
     try {
-      const { data, error } = await supabase
+      const { data } = await (supabase as any)
         .from('merch_items')
         .select('*')
         .eq('artist_id', artistProfileId)
         .order('created_at', { ascending: true });
-
-      if (data) {
-        setItems(data as MerchItem[]);
-      }
+      if (data) setItems(data);
     } catch (err) {
       console.error('Error loading merch:', err);
     }
@@ -60,44 +50,30 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
 
   const handleAddItem = async () => {
     if (!newItem.name.trim()) {
-      toast({ title: 'Name required', description: 'Please enter a merch item name.', variant: 'destructive' });
+      toast({ title: 'Name required', variant: 'destructive' });
       return;
     }
-
     setSaving(true);
     try {
       let imageUrl = newItem.image_url;
-
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `merch/${artistProfileId}/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('cover-art')
-          .upload(fileName, imageFile);
-
+        const { error: uploadError } = await supabase.storage.from('cover-art').upload(fileName, imageFile);
         if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('cover-art')
-          .getPublicUrl(fileName);
-
+        const { data: { publicUrl } } = supabase.storage.from('cover-art').getPublicUrl(fileName);
         imageUrl = publicUrl;
       }
-
-      const { error } = await supabase
-        .from('merch_items')
-        .insert({
-          artist_id: artistProfileId,
-          name: newItem.name.trim(),
-          description: newItem.description.trim(),
-          price: newItem.price,
-          image_url: imageUrl || null,
-          external_link: newItem.external_link.trim() || null,
-          is_available: true,
-        });
-
+      const { error } = await (supabase as any).from('merch_items').insert({
+        artist_id: artistProfileId,
+        name: newItem.name.trim(),
+        description: newItem.description.trim(),
+        price: newItem.price,
+        image_url: imageUrl || null,
+        external_link: newItem.external_link.trim() || null,
+        is_available: true,
+      });
       if (error) throw error;
-
       toast({ title: 'Merch added', description: `${newItem.name} has been added.` });
       setNewItem({ name: '', description: '', price: 0, image_url: '', external_link: '', is_available: true });
       setImageFile(null);
@@ -112,11 +88,7 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('merch_items')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await (supabase as any).from('merch_items').delete().eq('id', id);
       if (error) throw error;
       toast({ title: 'Merch removed' });
       await loadMerch();
@@ -132,75 +104,42 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
           <ShoppingBag className="h-5 w-5" />
           Merch Store
         </CardTitle>
-        <CardDescription>
-          Add merchandise items to your artist page ({items.length} items)
-        </CardDescription>
+        <CardDescription>Add merchandise items to your artist page ({items.length} items)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!showAddForm ? (
           <Button onClick={() => setShowAddForm(true)} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Merch Item
+            <Plus className="h-4 w-4 mr-2" /> Add Merch Item
           </Button>
         ) : (
           <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <Label>Item Name</Label>
-                <Input
-                  value={newItem.name}
-                  onChange={(e) => setNewItem(i => ({ ...i, name: e.target.value }))}
-                  placeholder="T-Shirt, Poster, etc."
-                  className="mt-1"
-                />
+                <Input value={newItem.name} onChange={(e) => setNewItem(i => ({ ...i, name: e.target.value }))} placeholder="T-Shirt, Poster, etc." className="mt-1" />
               </div>
               <div>
                 <Label>Price ($)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={newItem.price}
-                  onChange={(e) => setNewItem(i => ({ ...i, price: Number(e.target.value) }))}
-                  className="mt-1"
-                />
+                <Input type="number" min="0" step="0.01" value={newItem.price} onChange={(e) => setNewItem(i => ({ ...i, price: Number(e.target.value) }))} className="mt-1" />
               </div>
             </div>
             <div>
               <Label>Description</Label>
-              <Textarea
-                value={newItem.description}
-                onChange={(e) => setNewItem(i => ({ ...i, description: e.target.value }))}
-                placeholder="Describe the item..."
-                className="mt-1"
-                rows={2}
-              />
+              <Textarea value={newItem.description} onChange={(e) => setNewItem(i => ({ ...i, description: e.target.value }))} placeholder="Describe the item..." className="mt-1" rows={2} />
             </div>
             <div>
               <Label>Item Image</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="mt-1"
-              />
+              <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-1" />
             </div>
             <div>
               <Label>Purchase Link (optional)</Label>
-              <Input
-                value={newItem.external_link}
-                onChange={(e) => setNewItem(i => ({ ...i, external_link: e.target.value }))}
-                placeholder="https://your-store.com/item"
-                className="mt-1"
-              />
+              <Input value={newItem.external_link} onChange={(e) => setNewItem(i => ({ ...i, external_link: e.target.value }))} placeholder="https://your-store.com/item" className="mt-1" />
             </div>
             <div className="flex gap-2">
               <Button onClick={handleAddItem} variant="gradient" className="flex-1" disabled={saving}>
                 {saving ? 'Adding...' : 'Add Item'}
               </Button>
-              <Button onClick={() => { setShowAddForm(false); setImageFile(null); }} variant="outline">
-                Cancel
-              </Button>
+              <Button onClick={() => { setShowAddForm(false); setImageFile(null); }} variant="outline">Cancel</Button>
             </div>
           </div>
         )}
@@ -216,13 +155,10 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
                   <p className="font-medium truncate">{item.name}</p>
                   <Badge variant="secondary">${Number(item.price).toFixed(2)}</Badge>
                 </div>
-                {item.description && (
-                  <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                )}
+                {item.description && <p className="text-xs text-muted-foreground truncate">{item.description}</p>}
                 {item.external_link && (
                   <a href={item.external_link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1">
-                    <ExternalLink className="h-3 w-3" />
-                    Purchase link
+                    <ExternalLink className="h-3 w-3" /> Purchase link
                   </a>
                 )}
               </div>
@@ -232,9 +168,7 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
             </div>
           ))}
           {items.length === 0 && (
-            <p className="text-center text-muted-foreground py-6 text-sm">
-              No merch items yet. Add your first item above.
-            </p>
+            <p className="text-center text-muted-foreground py-6 text-sm">No merch items yet.</p>
           )}
         </div>
       </CardContent>
