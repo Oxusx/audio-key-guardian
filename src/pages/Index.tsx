@@ -40,6 +40,8 @@ const Index = () => {
   const [userSessionId, setUserSessionId] = useState<string>('');
   const [projectName, setProjectName] = useState('Music Project');
   const [totalBudget, setTotalBudget] = useState(10000);
+  const [acceptInvestments, setAcceptInvestments] = useState(false);
+
 
   // Mock audio files - will be replaced by uploaded files if available
   const defaultAudioFiles: AudioFile[] = [];
@@ -347,6 +349,8 @@ const Index = () => {
           }
           setProjectName(settings.project_name || 'Music Project');
           setTotalBudget(Number(settings.investment_budget) || 10000);
+          setAcceptInvestments(((settings as any).accept_investments ?? false) && Number(settings.investment_budget) > 0);
+
           
           // Store in localStorage for investment page
           localStorage.setItem('projectName', settings.project_name || 'Music Project');
@@ -492,14 +496,17 @@ const Index = () => {
             )}
           </div>
         
-        {/* Invest Button */}
-        <div className="max-w-3xl mx-auto mt-8">
-          <Link to="/investment">
-            <Button variant="gradient" size="lg" className="w-full">
-              Invest in This Project
-            </Button>
-          </Link>
-        </div>
+        {/* Invest Button — only if admin accepts investments */}
+        {acceptInvestments && (
+          <div className="max-w-3xl mx-auto mt-8">
+            <Link to="/investment">
+              <Button variant="gradient" size="lg" className="w-full">
+                Invest in This Project
+              </Button>
+            </Link>
+          </div>
+        )}
+
       </div>
 
       {/* Mini Player Bar */}

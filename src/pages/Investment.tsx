@@ -13,7 +13,9 @@ import StripePaymentForm from '@/components/StripePaymentForm';
 import { useActivityTracking } from '@/hooks/useActivityTracking';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = STRIPE_PK ? loadStripe(STRIPE_PK) : null;
+
 
 const Investment = () => {
   const navigate = useNavigate();
