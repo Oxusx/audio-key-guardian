@@ -17,32 +17,46 @@ export type Database = {
       access_keys: {
         Row: {
           access_type: string
+          artist_profile_id: string | null
           created_at: string
           created_by: string
           expires_at: string | null
           id: string
+          includes_merch: boolean
           is_active: boolean
           key_code: string
         }
         Insert: {
           access_type: string
+          artist_profile_id?: string | null
           created_at?: string
           created_by: string
           expires_at?: string | null
           id?: string
+          includes_merch?: boolean
           is_active?: boolean
           key_code: string
         }
         Update: {
           access_type?: string
+          artist_profile_id?: string | null
           created_at?: string
           created_by?: string
           expires_at?: string | null
           id?: string
+          includes_merch?: boolean
           is_active?: boolean
           key_code?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "access_keys_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "artist_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       activity_logs: {
         Row: {
@@ -82,6 +96,7 @@ export type Database = {
       }
       admin_settings: {
         Row: {
+          accept_investments: boolean
           admin_id: string
           cover_art_url: string | null
           created_at: string
@@ -92,6 +107,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accept_investments?: boolean
           admin_id: string
           cover_art_url?: string | null
           created_at?: string
@@ -102,6 +118,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accept_investments?: boolean
           admin_id?: string
           cover_art_url?: string | null
           created_at?: string
@@ -152,6 +169,51 @@ export type Database = {
           referrer?: string | null
           user_id?: string | null
           user_session_id?: string | null
+        }
+        Relationships: []
+      }
+      artist_profiles: {
+        Row: {
+          banner_image_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string
+          id: string
+          is_public: boolean
+          profile_image_url: string | null
+          require_key: boolean
+          social_links: Json | null
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          banner_image_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          is_public?: boolean
+          profile_image_url?: string | null
+          require_key?: boolean
+          social_links?: Json | null
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          banner_image_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_public?: boolean
+          profile_image_url?: string | null
+          require_key?: boolean
+          social_links?: Json | null
+          updated_at?: string
+          user_id?: string
+          username?: string
         }
         Relationships: []
       }
@@ -321,6 +383,53 @@ export type Database = {
           user_email?: string
         }
         Relationships: []
+      }
+      merch_items: {
+        Row: {
+          artist_id: string
+          created_at: string
+          description: string | null
+          external_link: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string
+          description?: string | null
+          external_link?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string
+          description?: string | null
+          external_link?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_items_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artist_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       track_likes: {
         Row: {

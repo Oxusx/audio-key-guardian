@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, LogOut, BarChart, FileText, Music, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Upload, LogOut, BarChart, FileText, Music, Trash2, DollarSign } from 'lucide-react';
+
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,10 +22,12 @@ const ArtistDashboard = () => {
   const [artistProfileId, setArtistProfileId] = useState<string | undefined>();
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [investmentBudget, setInvestmentBudget] = useState(0);
+  const [acceptInvestments, setAcceptInvestments] = useState(false);
   const [projectName, setProjectName] = useState('Music Project');
   const [roiPercentage, setRoiPercentage] = useState(20);
   const [coverArtFile, setCoverArtFile] = useState<File | null>(null);
   const [coverArtPreview, setCoverArtPreview] = useState('');
+
 
   useEffect(() => {
     if (!loading && !isAdmin) navigate('/auth');
@@ -46,8 +50,10 @@ const ArtistDashboard = () => {
         setProjectName(settings.project_name || 'Music Project');
         setInvestmentBudget(Number(settings.investment_budget) || 0);
         setRoiPercentage(Number(settings.roi_percentage) || 20);
+        setAcceptInvestments((settings as any).accept_investments ?? false);
         if (settings.cover_art_url) setCoverArtPreview(settings.cover_art_url);
       }
+
 
       const { data: files } = await supabase
         .from('audio_files')
@@ -63,15 +69,9 @@ const ArtistDashboard = () => {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !user) return;
-    const remainingSlots = 5 - audioFiles.length;
-    if (remainingSlots <= 0) {
-      toast({ title: 'Upload limit reached', description: 'Maximum 5 audio files.', variant: 'destructive' });
-      return;
-    }
     setUploadingFiles(true);
     try {
-      const filesToUpload = Math.min(files.length, remainingSlots);
-      for (let i = 0; i < filesToUpload; i++) {
+      for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -82,13 +82,14 @@ const ArtistDashboard = () => {
         if (dbError) throw dbError;
       }
       await loadAdminData();
-      toast({ title: 'Files uploaded', description: `${filesToUpload} file(s) uploaded.` });
+      toast({ title: 'Files uploaded', description: `${files.length} file(s) uploaded.` });
     } catch (error: any) {
       toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
     } finally {
       setUploadingFiles(false);
     }
   };
+
 
   const deleteFile = async (id: string, fileUrl: string) => {
     try {
@@ -130,7 +131,9 @@ const ArtistDashboard = () => {
         investment_budget: investmentBudget,
         roi_percentage: roiPercentage,
         cover_art_url: coverArtUrl,
-      });
+        accept_investments: acceptInvestments,
+      } as any);
+
       if (error) throw error;
       toast({ title: 'Settings saved' });
       setCoverArtFile(null);
@@ -191,16 +194,17 @@ const ArtistDashboard = () => {
               <CardTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5" /> Audio Files
               </CardTitle>
-              <CardDescription>{audioFiles.length}/5 uploaded</CardDescription>
+              <CardDescription>{audioFiles.length} uploaded — no limit</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Input
                 type="file"
-                accept=".wav,.mp3"
+                accept=".wav,.mp3,audio/*"
                 multiple
                 onChange={handleFileUpload}
-                disabled={audioFiles.length >= 5 || uploadingFiles}
+                disabled={uploadingFiles}
               />
+
               <div className="space-y-2">
                 {audioFiles.map((file) => (
                   <div key={file.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
@@ -239,9 +243,20 @@ const ArtistDashboard = () => {
         <Card className="shadow-elegant">
           <CardHeader>
             <CardTitle>Project Settings</CardTitle>
-            <CardDescription>Investment parameters</CardDescription>
+            <CardDescription>Choose whether to accept investments and set a goal</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Accept Investments</p>
+                  <p className="text-xs text-muted-foreground">Show an Invest button to key-holders</p>
+                </div>
+              </div>
+              <Switch checked={acceptInvestments} onCheckedChange={setAcceptInvestments} />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Project Name</Label>

@@ -13,7 +13,9 @@ import StripePaymentForm from '@/components/StripePaymentForm';
 import { useActivityTracking } from '@/hooks/useActivityTracking';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = STRIPE_PK ? loadStripe(STRIPE_PK) : null;
+
 
 const Investment = () => {
   const navigate = useNavigate();
@@ -341,7 +343,7 @@ const Investment = () => {
                 </p>
               </div>
 
-              {clientSecret && (
+              {clientSecret && stripePromise && (
                 <Elements stripe={stripePromise} options={{ clientSecret }}>
                   <StripePaymentForm
                     email={email}
@@ -357,6 +359,12 @@ const Investment = () => {
                   />
                 </Elements>
               )}
+              {clientSecret && !stripePromise && (
+                <div className="p-6 bg-destructive/10 rounded-lg text-center text-sm">
+                  Payments are not configured. Please contact the site admin.
+                </div>
+              )}
+
 
               {!clientSecret && (
                 <div className="p-6 bg-muted/50 rounded-lg text-center">
