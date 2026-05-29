@@ -420,9 +420,27 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Blurred backdrop (Apple Music style) */}
+      {coverArt && (
+        <div
+          className="absolute inset-0 -z-10 opacity-40"
+          style={{
+            backgroundImage: `url(${coverArt})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(80px) saturate(180%)',
+            transform: 'scale(1.2)',
+          }}
+        />
+      )}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/40 via-background/70 to-background" />
+
       {/* Admin Login Button - Top Right */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground text-xs">
+          Logout
+        </Button>
         <Link to="/auth">
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Settings className="h-4 w-4" />
@@ -430,71 +448,91 @@ const Index = () => {
         </Link>
       </div>
 
-      {/* Cover Art Section */}
-      <div className="pt-16 px-6 pb-8">
-        <div className="max-w-md mx-auto">
+      {/* Header: Cover + Title (Apple Music album header) */}
+      <div className="pt-20 px-6 pb-6">
+        <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
           {coverArt ? (
-            <img 
-              src={coverArt} 
-              alt="Album Cover" 
-              className="w-full aspect-square object-cover rounded-2xl shadow-glow"
+            <img
+              src={coverArt}
+              alt="Album Cover"
+              className="w-64 h-64 md:w-72 md:h-72 object-cover rounded-2xl shadow-2xl"
             />
           ) : (
-            <div className="w-full aspect-square bg-gradient-primary rounded-2xl shadow-glow flex items-center justify-center">
+            <div className="w-64 h-64 md:w-72 md:h-72 bg-gradient-primary rounded-2xl shadow-2xl flex items-center justify-center">
               <Volume2 className="h-24 w-24 text-primary-foreground/50" />
             </div>
+          )}
+          <h1 className="mt-6 text-3xl md:text-4xl font-bold tracking-tight">{projectName}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {audioFiles.length} {audioFiles.length === 1 ? 'track' : 'tracks'}
+          </p>
+          {audioFiles.length > 0 && (
+            <Button
+              variant="gradient"
+              size="lg"
+              className="mt-5 rounded-full px-8"
+              onClick={() => playAudio(audioFiles[0].id)}
+            >
+              <Play className="h-5 w-5 mr-1" fill="currentColor" /> Play
+            </Button>
           )}
         </div>
       </div>
 
-        {/* Track List */}
-        <div className="px-6 pb-32">
-          <div className="max-w-3xl mx-auto space-y-1">
-            {audioFiles.length === 0 ? (
-              <div className="text-center py-12">
-                <Music className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg mb-2">No tracks available yet</p>
-                <p className="text-sm text-muted-foreground">The admin hasn't uploaded any audio files yet.</p>
-              </div>
-            ) : (
-              audioFiles.map((file, index) => (
-                <div
-                  key={file.id}
-                  className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
-                    audio.currentTrack?.id === file.id ? 'bg-primary/10' : 'hover:bg-muted/30'
-                  }`}
-                  onClick={() => playAudio(file.id)}
-                >
-                  <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-medium truncate ${
-                      audio.currentTrack?.id === file.id ? 'text-primary' : 'text-foreground'
-                    }`}>
-                      {file.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {file.duration}
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => handleLike(file.name, e)}
-                    className={`flex items-center gap-1 transition-colors shrink-0 ${
-                      userLikes.has(file.name) 
-                        ? 'text-red-500' 
-                        : 'text-muted-foreground hover:text-red-500'
+      {/* Track List */}
+      <div className="px-4 md:px-6 pb-32">
+        <div className="max-w-3xl mx-auto">
+          {audioFiles.length === 0 ? (
+            <div className="text-center py-12">
+              <Music className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground text-lg mb-2">No tracks available yet</p>
+              <p className="text-sm text-muted-foreground">The admin hasn't uploaded any audio files yet.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/40">
+              {audioFiles.map((file, index) => {
+                const isCurrent = audio.currentTrack?.id === file.id;
+                return (
+                  <div
+                    key={file.id}
+                    className={`group flex items-center gap-4 px-3 py-3 rounded-lg transition-colors cursor-pointer ${
+                      isCurrent ? 'bg-primary/10' : 'hover:bg-muted/40'
                     }`}
+                    onClick={() => playAudio(file.id)}
                   >
-                    <Heart 
-                      className="h-4 w-4" 
-                      fill={userLikes.has(file.name) ? 'currentColor' : 'none'}
-                    />
-                    <span className="text-xs">{trackLikes[file.name] || 0}</span>
-                  </button>
-                  <Play className="h-5 w-5 text-muted-foreground shrink-0" />
-                </div>
-              ))
-            )}
-          </div>
+                    <div className="w-6 text-center text-sm text-muted-foreground tabular-nums">
+                      {isCurrent && audio.isPlaying ? (
+                        <Pause className="h-4 w-4 mx-auto text-primary" fill="currentColor" />
+                      ) : (
+                        <span className="group-hover:hidden">{index + 1}</span>
+                      )}
+                      {!isCurrent && (
+                        <Play className="h-4 w-4 mx-auto hidden group-hover:block" fill="currentColor" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium truncate ${isCurrent ? 'text-primary' : 'text-foreground'}`}>
+                        {file.name}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => handleLike(file.name, e)}
+                      className={`flex items-center gap-1 transition-colors shrink-0 ${
+                        userLikes.has(file.name) ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+                      }`}
+                    >
+                      <Heart className="h-4 w-4" fill={userLikes.has(file.name) ? 'currentColor' : 'none'} />
+                      <span className="text-xs tabular-nums">{trackLikes[file.name] || 0}</span>
+                    </button>
+                    <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
+                      {file.duration}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
         
         {/* Invest Button — only if admin accepts investments */}
         {acceptInvestments && (
