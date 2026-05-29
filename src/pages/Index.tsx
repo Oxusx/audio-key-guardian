@@ -544,8 +544,9 @@ const Index = () => {
             </Link>
           </div>
         )}
-
+        </div>
       </div>
+
 
       {/* Mini Player Bar */}
       {audio.currentTrack && (
