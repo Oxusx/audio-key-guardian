@@ -243,9 +243,20 @@ const ArtistDashboard = () => {
         <Card className="shadow-elegant">
           <CardHeader>
             <CardTitle>Project Settings</CardTitle>
-            <CardDescription>Investment parameters</CardDescription>
+            <CardDescription>Choose whether to accept investments and set a goal</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Accept Investments</p>
+                  <p className="text-xs text-muted-foreground">Show an Invest button to key-holders</p>
+                </div>
+              </div>
+              <Switch checked={acceptInvestments} onCheckedChange={setAcceptInvestments} />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Project Name</Label>
