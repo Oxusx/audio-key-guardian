@@ -391,17 +391,7 @@ const UserAccess = () => {
             ))}
           </div>
 
-          {/* Investment Button */}
-          <div className="flex justify-center">
-            <Button 
-              variant="gradient" 
-              size="lg"
-              className="w-full max-w-xs"
-              onClick={() => window.location.href = '/investment'}
-            >
-              💰 Invest
-            </Button>
-          </div>
+          {/* Investment Button temporarily hidden */}
         </div>
 
         {/* Bottom Media Controls - Only show when playing */}

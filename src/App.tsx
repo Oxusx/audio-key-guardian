@@ -44,7 +44,8 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/user" element={<User />} />
-            <Route path="/investment" element={<Investment />} />
+            {/* Investment route temporarily disabled — kept in code for later */}
+            {/* <Route path="/investment" element={<Investment />} /> */}
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/artist-keys" element={<ArtistKeys />} />
             <Route path="/player" element={<Player />} />
