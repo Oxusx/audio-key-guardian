@@ -226,7 +226,14 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
       }}
     >
       {children}
-      <audio ref={audioRef} />
+      <audio
+        ref={audioRef}
+        controlsList="nodownload noplaybackrate noremoteplayback"
+        disableRemotePlayback
+        // @ts-ignore - non-standard but widely supported
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
+      />
     </AudioContext.Provider>
   );
 };
