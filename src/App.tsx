@@ -31,6 +31,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AudioProvider>
+          <SubdomainRouter />
           <CookieConsent />
           <Routes>
             <Route path="/" element={<Index />} />
