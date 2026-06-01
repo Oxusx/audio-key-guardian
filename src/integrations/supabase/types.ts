@@ -431,6 +431,27 @@ export type Database = {
           },
         ]
       }
+      reserved_names: {
+        Row: {
+          created_at: string
+          kind: string
+          name: string
+          note: string | null
+        }
+        Insert: {
+          created_at?: string
+          kind: string
+          name: string
+          note?: string | null
+        }
+        Update: {
+          created_at?: string
+          kind?: string
+          name?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
       track_likes: {
         Row: {
           created_at: string
