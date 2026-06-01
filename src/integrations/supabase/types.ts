@@ -217,6 +217,63 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_sales: {
+        Row: {
+          artist_amount: number
+          artist_user_id: string
+          artist_username: string
+          created_at: string
+          currency: string
+          customer_email: string | null
+          gross_amount: number
+          id: string
+          payout_id: string | null
+          platform_fee: number
+          product_title: string
+          quantity: number
+          shopify_line_item_id: string
+          shopify_order_id: string
+          shopify_product_id: string | null
+          status: string
+        }
+        Insert: {
+          artist_amount: number
+          artist_user_id: string
+          artist_username: string
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          gross_amount: number
+          id?: string
+          payout_id?: string | null
+          platform_fee: number
+          product_title: string
+          quantity?: number
+          shopify_line_item_id: string
+          shopify_order_id: string
+          shopify_product_id?: string | null
+          status?: string
+        }
+        Update: {
+          artist_amount?: number
+          artist_user_id?: string
+          artist_username?: string
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          gross_amount?: number
+          id?: string
+          payout_id?: string | null
+          platform_fee?: number
+          product_title?: string
+          quantity?: number
+          shopify_line_item_id?: string
+          shopify_order_id?: string
+          shopify_product_id?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       audio_files: {
         Row: {
           admin_id: string
@@ -430,6 +487,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payout_accounts: {
+        Row: {
+          charges_enabled: boolean
+          created_at: string
+          details_submitted: boolean
+          id: string
+          payouts_enabled: boolean
+          stripe_account_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          charges_enabled?: boolean
+          created_at?: string
+          details_submitted?: boolean
+          id?: string
+          payouts_enabled?: boolean
+          stripe_account_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          charges_enabled?: boolean
+          created_at?: string
+          details_submitted?: boolean
+          id?: string
+          payouts_enabled?: boolean
+          stripe_account_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          error_message: string | null
+          id: string
+          status: string
+          stripe_transfer_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          error_message?: string | null
+          id?: string
+          status?: string
+          stripe_transfer_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          error_message?: string | null
+          id?: string
+          status?: string
+          stripe_transfer_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       reserved_names: {
         Row: {
