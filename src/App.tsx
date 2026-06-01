@@ -21,8 +21,11 @@ import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import ArtistDashboard from "./pages/ArtistDashboard";
 import ArtistPage from "./pages/ArtistPage";
+import { useCartSync } from "./hooks/useCartSync";
 
 const queryClient = new QueryClient();
+
+const CartSyncBridge = () => { useCartSync(); return null; };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -31,6 +34,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AudioProvider>
+          <CartSyncBridge />
           <SubdomainRouter />
           <CookieConsent />
           <Routes>

@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, Heart, Unlock, Instagram, Twitter, Youtube, Globe, ShoppingBag, ExternalLink, Music, SkipForward } from 'lucide-react';
+import { Play, Pause, Heart, Unlock, Instagram, Twitter, Youtube, Globe, ShoppingBag, ExternalLink, Music, SkipForward, Loader2, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAudio } from '@/contexts/AudioContext';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchProductsByArtist, ShopifyProduct } from '@/lib/shopify';
+import { useCartStore } from '@/stores/cartStore';
+import { CartDrawer } from '@/components/shop/CartDrawer';
 
 interface ArtistProfileData {
   id: string;
@@ -40,6 +43,8 @@ const ArtistPage = () => {
 
   const [profile, setProfile] = useState<ArtistProfileData | null>(null);
   const [merch, setMerch] = useState<MerchItemData[]>([]);
+  const [shopifyProducts, setShopifyProducts] = useState<ShopifyProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -47,8 +52,20 @@ const ArtistPage = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [coverArt, setCoverArt] = useState<string>('');
 
+  const addToCart = useCartStore((s) => s.addItem);
+  const cartLoading = useCartStore((s) => s.isLoading);
+
   useEffect(() => {
     if (username) loadArtistPage();
+  }, [username]);
+
+  useEffect(() => {
+    if (!username) return;
+    setProductsLoading(true);
+    fetchProductsByArtist(username)
+      .then(setShopifyProducts)
+      .catch((e) => console.error('Shopify fetch failed', e))
+      .finally(() => setProductsLoading(false));
   }, [username]);
 
   const loadArtistPage = async () => {
@@ -259,9 +276,12 @@ const ArtistPage = () => {
                 <Music className="h-10 w-10 text-primary" />
               </div>
             )}
-            <div className="pb-2">
-              <h1 className="text-2xl md:text-3xl font-bold">{profile.display_name}</h1>
-              <p className="text-muted-foreground text-sm">@{profile.username}</p>
+            <div className="pb-2 flex-1 flex items-end justify-between">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold">{profile.display_name}</h1>
+                <p className="text-muted-foreground text-sm">@{profile.username}</p>
+              </div>
+              <CartDrawer />
             </div>
           </div>
         </div>
@@ -368,37 +388,65 @@ const ArtistPage = () => {
           </div>
         )}
 
-        {/* Merch Section */}
-        {merch.length > 0 && (
+        {/* Merch Section — Shopify */}
+        {(shopifyProducts.length > 0 || productsLoading) && (
           <div>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Merch
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {merch.map((item) => (
-                <Card key={item.id} className="overflow-hidden bg-card/50 backdrop-blur-sm">
-                  {item.image_url && (
-                    <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover" />
-                  )}
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">{item.name}</h3>
-                      <Badge variant="secondary">${Number(item.price).toFixed(2)}</Badge>
-                    </div>
-                    {item.description && (
-                      <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
-                    )}
-                    {item.external_link && (
-                      <a href={item.external_link} target="_blank" rel="noopener noreferrer">
-                        <Button variant="gradient" size="sm" className="w-full">
-                          <ExternalLink className="h-4 w-4 mr-2" /> Buy Now
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {shopifyProducts.map((p) => {
+                  const variant = p.node.variants.edges[0]?.node;
+                  const img = p.node.images.edges[0]?.node;
+                  if (!variant) return null;
+                  return (
+                    <Card key={p.node.id} className="overflow-hidden bg-card/50 backdrop-blur-sm">
+                      {img && <img src={img.url} alt={p.node.title} className="w-full h-48 object-cover" />}
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">{p.node.title}</h3>
+                          <Badge variant="secondary">
+                            {variant.price.currencyCode} {parseFloat(variant.price.amount).toFixed(2)}
+                          </Badge>
+                        </div>
+                        {p.node.description && (
+                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{p.node.description}</p>
+                        )}
+                        <Button
+                          variant="gradient"
+                          size="sm"
+                          className="w-full"
+                          disabled={!variant.availableForSale || cartLoading}
+                          onClick={() =>
+                            addToCart({
+                              product: p,
+                              variantId: variant.id,
+                              variantTitle: variant.title,
+                              price: variant.price,
+                              quantity: 1,
+                              selectedOptions: variant.selectedOptions || [],
+                            })
+                          }
+                        >
+                          {cartLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : variant.availableForSale ? (
+                            <><ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart</>
+                          ) : (
+                            'Sold Out'
+                          )}
                         </Button>
-                      </a>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
