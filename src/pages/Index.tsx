@@ -534,8 +534,8 @@ const Index = () => {
           )}
 
         
-        {/* Invest Button — only if admin accepts investments */}
-        {acceptInvestments && (
+        {/* Invest Button temporarily hidden — backend still active */}
+        {false && acceptInvestments && (
           <div className="max-w-3xl mx-auto mt-8">
             <Link to="/investment">
               <Button variant="gradient" size="lg" className="w-full">
