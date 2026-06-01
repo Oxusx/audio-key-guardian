@@ -101,9 +101,43 @@ Deno.serve(async (req) => {
         status: "pending",
       });
 
-      if (!error) inserted.push(item.id);
-      else if (!error.message.includes("duplicate")) console.error("Insert error:", error);
-    }
+      if (!error) {
+        inserted.push(item.id);
+
+        // Also credit the 10% platform fee as a sale on the godscircle dashboard
+        if (profile.username !== PLATFORM_FEE_RECIPIENT_USERNAME && platformFee > 0) {
+          const { data: feeProfile } = await supabase
+            .from("artist_profiles")
+            .select("user_id, username")
+            .eq("username", PLATFORM_FEE_RECIPIENT_USERNAME)
+            .maybeSingle();
+
+          if (feeProfile) {
+            const { error: feeErr } = await supabase.from("artist_sales").insert({
+              artist_user_id: feeProfile.user_id,
+              artist_username: feeProfile.username,
+              shopify_order_id: orderId,
+              shopify_line_item_id: `${item.id}-fee`,
+              shopify_product_id: productId,
+              product_title: `Platform fee · ${item.title ?? "sale"} (${profile.username})`,
+              quantity: item.quantity ?? 1,
+              gross_amount: platformFee,
+              platform_fee: 0,
+              artist_amount: platformFee,
+              currency,
+              customer_email: customerEmail,
+              status: "pending",
+            });
+            if (feeErr && !feeErr.message.includes("duplicate")) {
+              console.error("Fee insert error:", feeErr);
+            }
+          } else {
+            console.warn(`Platform fee recipient profile '${PLATFORM_FEE_RECIPIENT_USERNAME}' not found — fee not credited.`);
+          }
+        }
+      } else if (!error.message.includes("duplicate")) {
+        console.error("Insert error:", error);
+      }
 
     return new Response(JSON.stringify({ ok: true, recorded: inserted.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
