@@ -46,6 +46,7 @@ const App = () => (
             <Route path="/player" element={<Player />} />
             <Route path="/artist-dashboard" element={<ArtistDashboard />} />
             <Route path="/:username" element={<ArtistPage />} />
+            <Route path="/:username/:projectKey" element={<ArtistPage />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/privacy" element={<Privacy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
