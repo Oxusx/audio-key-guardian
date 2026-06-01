@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ArtistProfileForm from '@/components/admin/ArtistProfileForm';
 import MerchManager from '@/components/admin/MerchManager';
 import KeyGeneratorWithMerch from '@/components/admin/KeyGeneratorWithMerch';
+import ShopifyProductUploader from '@/components/admin/ShopifyProductUploader';
 
 const ArtistDashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const ArtistDashboard = () => {
   const { toast } = useToast();
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [artistProfileId, setArtistProfileId] = useState<string | undefined>();
+  const [artistUsername, setArtistUsername] = useState<string | undefined>();
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [investmentBudget, setInvestmentBudget] = useState(0);
   const [acceptInvestments, setAcceptInvestments] = useState(false);
@@ -52,6 +54,16 @@ const ArtistDashboard = () => {
         setRoiPercentage(Number(settings.roi_percentage) || 20);
         setAcceptInvestments((settings as any).accept_investments ?? false);
         if (settings.cover_art_url) setCoverArtPreview(settings.cover_art_url);
+      }
+
+      const { data: profile } = await supabase
+        .from('artist_profiles')
+        .select('id, username')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (profile) {
+        setArtistProfileId(profile.id);
+        setArtistUsername(profile.username);
       }
 
 
@@ -184,8 +196,10 @@ const ArtistDashboard = () => {
         {/* Artist Profile */}
         <ArtistProfileForm
           userId={user.id}
-          onProfileSaved={(profile) => setArtistProfileId(profile.id)}
+          onProfileSaved={(profile) => { setArtistProfileId(profile.id); setArtistUsername(profile.username); }}
         />
+
+        <ShopifyProductUploader userId={user.id} username={artistUsername} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Audio Files */}
