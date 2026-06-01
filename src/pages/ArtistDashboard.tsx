@@ -14,6 +14,7 @@ import ArtistProfileForm from '@/components/admin/ArtistProfileForm';
 import MerchManager from '@/components/admin/MerchManager';
 import KeyGeneratorWithMerch from '@/components/admin/KeyGeneratorWithMerch';
 import ShopifyProductUploader from '@/components/admin/ShopifyProductUploader';
+import SalesAndPayouts from '@/components/admin/SalesAndPayouts';
 
 const ArtistDashboard = () => {
   const navigate = useNavigate();
@@ -200,6 +201,8 @@ const ArtistDashboard = () => {
         />
 
         <ShopifyProductUploader userId={user.id} username={artistUsername} />
+
+        <SalesAndPayouts />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Audio Files */}
