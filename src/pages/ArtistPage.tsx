@@ -33,7 +33,7 @@ interface MerchItemData {
 }
 
 const ArtistPage = () => {
-  const { username } = useParams<{ username: string }>();
+  const { username, projectKey } = useParams<{ username: string; projectKey?: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const audio = useAudio();
