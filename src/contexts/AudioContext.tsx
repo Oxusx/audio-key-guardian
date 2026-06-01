@@ -229,10 +229,8 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
       <audio
         ref={audioRef}
         controlsList="nodownload noplaybackrate noremoteplayback"
-        disableRemotePlayback
-        // @ts-ignore - non-standard but widely supported
-        disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
+        {...({ disableRemotePlayback: true, disablePictureInPicture: true } as any)}
       />
     </AudioContext.Provider>
   );
