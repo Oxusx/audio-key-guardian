@@ -10,6 +10,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import defaultCover from '@/assets/cover-art.jpeg';
 import localforage from 'localforage';
 import { supabase } from '@/integrations/supabase/client';
+import Footer from '@/components/Footer';
 
 interface AudioFile {
   id: string;
@@ -599,6 +600,7 @@ const Index = () => {
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 };

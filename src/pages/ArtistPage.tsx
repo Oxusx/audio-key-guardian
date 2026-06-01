@@ -468,6 +468,7 @@ const ArtistPage = () => {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 };
