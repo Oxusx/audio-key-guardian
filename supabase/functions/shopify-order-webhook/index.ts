@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const PLATFORM_FEE_RATE = 0.10; // 10%
+const PLATFORM_FEE_RECIPIENT_USERNAME = "godscircle"; // fees flow into this artist dashboard
 
 async function verifyHmac(rawBody: string, hmacHeader: string, secret: string): Promise<boolean> {
   const key = await crypto.subtle.importKey(
