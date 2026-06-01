@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, Heart, Unlock, Instagram, Twitter, Youtube, Globe, ShoppingBag, ExternalLink, Music, SkipForward } from 'lucide-react';
+import { Play, Pause, Heart, Unlock, Instagram, Twitter, Youtube, Globe, ShoppingBag, ExternalLink, Music, SkipForward, Loader2, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAudio } from '@/contexts/AudioContext';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchProductsByArtist, ShopifyProduct } from '@/lib/shopify';
+import { useCartStore } from '@/stores/cartStore';
+import { CartDrawer } from '@/components/shop/CartDrawer';
 
 interface ArtistProfileData {
   id: string;
