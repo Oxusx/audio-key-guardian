@@ -43,6 +43,8 @@ const ArtistPage = () => {
 
   const [profile, setProfile] = useState<ArtistProfileData | null>(null);
   const [merch, setMerch] = useState<MerchItemData[]>([]);
+  const [shopifyProducts, setShopifyProducts] = useState<ShopifyProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -50,8 +52,20 @@ const ArtistPage = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [coverArt, setCoverArt] = useState<string>('');
 
+  const addToCart = useCartStore((s) => s.addItem);
+  const cartLoading = useCartStore((s) => s.isLoading);
+
   useEffect(() => {
     if (username) loadArtistPage();
+  }, [username]);
+
+  useEffect(() => {
+    if (!username) return;
+    setProductsLoading(true);
+    fetchProductsByArtist(username)
+      .then(setShopifyProducts)
+      .catch((e) => console.error('Shopify fetch failed', e))
+      .finally(() => setProductsLoading(false));
   }, [username]);
 
   const loadArtistPage = async () => {
