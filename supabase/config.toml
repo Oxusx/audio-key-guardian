@@ -1,7 +1,4 @@
 project_id = "bctwgnekwkhvxmazkrvp"
 
-[functions.send-investment-confirmation]
-verify_jwt = false
-
-[functions.process-investment-payment]
+[functions.shopify-order-webhook]
 verify_jwt = false
