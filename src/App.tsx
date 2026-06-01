@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AudioProvider } from "./contexts/AudioContext";
 import { CookieConsent } from "./components/CookieConsent";
+import SubdomainRouter from "./components/SubdomainRouter";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
