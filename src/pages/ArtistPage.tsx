@@ -33,7 +33,7 @@ interface MerchItemData {
 }
 
 const ArtistPage = () => {
-  const { username } = useParams<{ username: string }>();
+  const { username, projectKey } = useParams<{ username: string; projectKey?: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const audio = useAudio();
@@ -92,9 +92,16 @@ const ArtistPage = () => {
       if (!profileData.require_key) {
         setHasAccess(true);
         await loadAudioFiles(profileData.user_id);
+        return;
       }
 
-      // Check stored access
+      // 1. Try URL-provided key (e.g. /ox/album1)
+      if (projectKey) {
+        const unlocked = await tryUnlock(profileData, projectKey, { silent: true });
+        if (unlocked) return;
+      }
+
+      // 2. Fallback: stored access from a previous unlock
       const stored = localStorage.getItem(`artist_access_${profileData.id}`);
       if (stored) {
         const storedData = JSON.parse(stored);
@@ -106,7 +113,6 @@ const ArtistPage = () => {
             localStorage.removeItem(`artist_access_${profileData.id}`);
           }
         } else {
-          // Indefinite
           setHasAccess(true);
           await loadAudioFiles(profileData.user_id);
         }
@@ -129,52 +135,64 @@ const ArtistPage = () => {
     if (files) setAudioFiles(files);
   };
 
-  const handleKeySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accessKey.trim() || !profile) return;
-
+  // Core key-validation routine, reused by URL auto-unlock and form submit
+  const tryUnlock = async (
+    profileData: ArtistProfileData,
+    code: string,
+    opts: { silent?: boolean } = {}
+  ): Promise<boolean> => {
+    const silent = opts.silent ?? false;
     try {
-      // Scope key to this artist: must match artist_profile_id OR be created by this artist (legacy keys)
       const { data: keyRow, error } = await supabase
         .from('access_keys')
         .select('*')
-        .eq('key_code', accessKey.toUpperCase())
+        .eq('key_code', code.toUpperCase())
         .eq('is_active', true)
         .maybeSingle();
 
       if (error) throw error;
       if (!keyRow) {
-        toast({ title: 'Invalid key', description: 'This key is not valid.', variant: 'destructive' });
-        return;
+        if (!silent) toast({ title: 'Invalid key', description: 'This key is not valid.', variant: 'destructive' });
+        return false;
       }
 
       const belongsToArtist =
-        (keyRow as any).artist_profile_id === profile.id ||
-        keyRow.created_by === profile.user_id;
+        (keyRow as any).artist_profile_id === profileData.id ||
+        keyRow.created_by === profileData.user_id;
 
       if (!belongsToArtist) {
-        toast({ title: 'Wrong artist', description: 'This key is not valid for this artist.', variant: 'destructive' });
-        return;
+        if (!silent) toast({ title: 'Wrong artist', description: 'This key is not valid for this artist.', variant: 'destructive' });
+        return false;
       }
 
       if (keyRow.expires_at && new Date(keyRow.expires_at) < new Date()) {
-        toast({ title: 'Key expired', description: 'This key has expired.', variant: 'destructive' });
-        return;
+        if (!silent) toast({ title: 'Key expired', description: 'This key has expired.', variant: 'destructive' });
+        return false;
       }
 
       setHasAccess(true);
-      localStorage.setItem(`artist_access_${profile.id}`, JSON.stringify({
+      localStorage.setItem(`artist_access_${profileData.id}`, JSON.stringify({
         accessType: keyRow.access_type,
         expiresAt: keyRow.expires_at,
         includesMerch: (keyRow as any).includes_merch,
         enteredAt: new Date().toISOString(),
       }));
 
-      await loadAudioFiles(profile.user_id);
-      toast({ title: 'Access granted!', description: `${keyRow.access_type} access activated for ${profile.display_name}.` });
+      await loadAudioFiles(profileData.user_id);
+      if (!silent) {
+        toast({ title: 'Access granted!', description: `${keyRow.access_type} access activated for ${profileData.display_name}.` });
+      }
+      return true;
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      if (!silent) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
     }
+  };
+
+  const handleKeySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessKey.trim() || !profile) return;
+    await tryUnlock(profile, accessKey);
   };
 
   const playTrack = async (file: any) => {
