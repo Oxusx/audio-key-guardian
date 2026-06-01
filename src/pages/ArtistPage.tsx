@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchProductsByArtist, ShopifyProduct } from '@/lib/shopify';
 import { useCartStore } from '@/stores/cartStore';
 import { CartDrawer } from '@/components/shop/CartDrawer';
+import Footer from '@/components/Footer';
 
 interface ArtistProfileData {
   id: string;
@@ -468,6 +469,7 @@ const ArtistPage = () => {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 };

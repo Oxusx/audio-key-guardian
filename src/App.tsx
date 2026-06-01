@@ -21,6 +21,11 @@ import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import ArtistDashboard from "./pages/ArtistDashboard";
 import ArtistPage from "./pages/ArtistPage";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import ReturnPolicy from "./pages/ReturnPolicy";
+import ShippingPolicy from "./pages/ShippingPolicy";
+import Contact from "./pages/Contact";
 import { useCartSync } from "./hooks/useCartSync";
 
 const queryClient = new QueryClient();
@@ -54,6 +59,11 @@ const App = () => (
             <Route path="/:username/:projectKey" element={<ArtistPage />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/return-policy" element={<ReturnPolicy />} />
+            <Route path="/shipping-policy" element={<ShippingPolicy />} />
+            <Route path="/contact" element={<Contact />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
