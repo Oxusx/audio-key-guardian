@@ -134,28 +134,44 @@ const ArtistPage = () => {
     if (!accessKey.trim() || !profile) return;
 
     try {
-      const { data, error } = await supabase.rpc('validate_access_key', {
-        key_code_param: accessKey.toUpperCase(),
-      });
+      // Scope key to this artist: must match artist_profile_id OR be created by this artist (legacy keys)
+      const { data: keyRow, error } = await supabase
+        .from('access_keys')
+        .select('*')
+        .eq('key_code', accessKey.toUpperCase())
+        .eq('is_active', true)
+        .maybeSingle();
 
       if (error) throw error;
-
-      if (data && data.length > 0 && data[0].is_valid) {
-        const result = data[0];
-        setHasAccess(true);
-
-        localStorage.setItem(`artist_access_${profile.id}`, JSON.stringify({
-          accessType: result.access_type,
-          expiresAt: result.expires_at,
-          enteredAt: new Date().toISOString(),
-        }));
-
-        await loadAudioFiles(profile.user_id);
-
-        toast({ title: 'Access granted!', description: `${result.access_type} access activated.` });
-      } else {
-        toast({ title: 'Invalid key', description: 'This key is not valid or has expired.', variant: 'destructive' });
+      if (!keyRow) {
+        toast({ title: 'Invalid key', description: 'This key is not valid.', variant: 'destructive' });
+        return;
       }
+
+      const belongsToArtist =
+        (keyRow as any).artist_profile_id === profile.id ||
+        keyRow.created_by === profile.user_id;
+
+      if (!belongsToArtist) {
+        toast({ title: 'Wrong artist', description: 'This key is not valid for this artist.', variant: 'destructive' });
+        return;
+      }
+
+      if (keyRow.expires_at && new Date(keyRow.expires_at) < new Date()) {
+        toast({ title: 'Key expired', description: 'This key has expired.', variant: 'destructive' });
+        return;
+      }
+
+      setHasAccess(true);
+      localStorage.setItem(`artist_access_${profile.id}`, JSON.stringify({
+        accessType: keyRow.access_type,
+        expiresAt: keyRow.expires_at,
+        includesMerch: (keyRow as any).includes_merch,
+        enteredAt: new Date().toISOString(),
+      }));
+
+      await loadAudioFiles(profile.user_id);
+      toast({ title: 'Access granted!', description: `${keyRow.access_type} access activated for ${profile.display_name}.` });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
