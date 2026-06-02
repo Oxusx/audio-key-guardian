@@ -661,6 +661,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bootstrap_first_admin: { Args: never; Returns: undefined }
       get_public_admin_settings: {
         Args: { admin_id_param?: string }
         Returns: {
