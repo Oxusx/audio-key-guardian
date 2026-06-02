@@ -450,39 +450,54 @@ const Index = () => {
       </div>
 
       {/* Header: Cover + Title (Apple Music album header) */}
-      <div className="pt-20 px-6 pb-6">
-        <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
+      <div className="pt-16 px-6 pb-4">
+        <div className="max-w-2xl mx-auto flex flex-col items-center text-center">
           {coverArt ? (
             <img
               src={coverArt}
               alt="Album Cover"
-              className="w-64 h-64 md:w-72 md:h-72 object-cover rounded-2xl shadow-2xl"
+              className="w-[280px] h-[280px] md:w-[320px] md:h-[320px] object-cover rounded-2xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)] ring-1 ring-white/5"
             />
           ) : (
-            <div className="w-64 h-64 md:w-72 md:h-72 bg-gradient-primary rounded-2xl shadow-2xl flex items-center justify-center">
+            <div className="w-[280px] h-[280px] md:w-[320px] md:h-[320px] bg-gradient-primary rounded-2xl shadow-2xl flex items-center justify-center">
               <Volume2 className="h-24 w-24 text-primary-foreground/50" />
             </div>
           )}
-          <h1 className="mt-6 text-3xl md:text-4xl font-bold tracking-tight">{projectName}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {audioFiles.length} {audioFiles.length === 1 ? 'track' : 'tracks'}
+          <h1 className="mt-6 text-[28px] md:text-[32px] font-bold tracking-tight leading-tight text-foreground">
+            {projectName}
+          </h1>
+          <p className="mt-1 text-[15px] font-medium text-primary">
+            Exclusive Release
           </p>
+          <p className="mt-1 text-[13px] text-muted-foreground/80 font-medium">
+            {audioFiles.length} {audioFiles.length === 1 ? 'track' : 'tracks'} · Lossless
+          </p>
+
           {audioFiles.length > 0 && (
-            <Button
-              variant="gradient"
-              size="lg"
-              className="mt-5 rounded-full px-8"
-              onClick={() => playAudio(audioFiles[0].id)}
-            >
-              <Play className="h-5 w-5 mr-1" fill="currentColor" /> Play
-            </Button>
+            <div className="mt-6 grid grid-cols-2 gap-3 w-full max-w-md">
+              <button
+                onClick={() => playAudio(audioFiles[0].id)}
+                className="flex items-center justify-center gap-2 h-12 rounded-xl bg-card/70 backdrop-blur-md ring-1 ring-white/5 text-primary font-semibold text-[17px] hover:bg-card/90 transition-colors"
+              >
+                <Play className="h-5 w-5" fill="currentColor" /> Play
+              </button>
+              <button
+                onClick={() => {
+                  const i = Math.floor(Math.random() * audioFiles.length);
+                  playAudio(audioFiles[i].id);
+                }}
+                className="flex items-center justify-center gap-2 h-12 rounded-xl bg-card/70 backdrop-blur-md ring-1 ring-white/5 text-primary font-semibold text-[17px] hover:bg-card/90 transition-colors"
+              >
+                <SkipForward className="h-5 w-5" fill="currentColor" /> Shuffle
+              </button>
+            </div>
           )}
         </div>
       </div>
 
       {/* Track List */}
-      <div className="px-4 md:px-6 pb-32">
-        <div className="max-w-3xl mx-auto">
+      <div className="px-4 md:px-6 pb-32 pt-4">
+        <div className="max-w-2xl mx-auto">
           {audioFiles.length === 0 ? (
             <div className="text-center py-12">
               <Music className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -490,18 +505,18 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">The admin hasn't uploaded any audio files yet.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border/40">
+            <div>
               {audioFiles.map((file, index) => {
                 const isCurrent = audio.currentTrack?.id === file.id;
                 return (
                   <div
                     key={file.id}
-                    className={`group flex items-center gap-4 px-3 py-3 rounded-lg transition-colors cursor-pointer ${
-                      isCurrent ? 'bg-primary/10' : 'hover:bg-muted/40'
+                    className={`group flex items-center gap-4 px-2 py-3.5 border-b border-border/30 transition-colors cursor-pointer ${
+                      isCurrent ? '' : 'hover:bg-muted/20'
                     }`}
                     onClick={() => playAudio(file.id)}
                   >
-                    <div className="w-6 text-center text-sm text-muted-foreground tabular-nums">
+                    <div className="w-6 text-center text-[15px] text-muted-foreground/70 tabular-nums font-medium">
                       {isCurrent && audio.isPlaying ? (
                         <Pause className="h-4 w-4 mx-auto text-primary" fill="currentColor" />
                       ) : (
@@ -512,20 +527,20 @@ const Index = () => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`font-medium truncate ${isCurrent ? 'text-primary' : 'text-foreground'}`}>
+                      <p className={`text-[16px] font-medium truncate tracking-tight ${isCurrent ? 'text-primary' : 'text-foreground'}`}>
                         {file.name}
                       </p>
                     </div>
                     <button
                       onClick={(e) => handleLike(file.name, e)}
-                      className={`flex items-center gap-1 transition-colors shrink-0 ${
-                        userLikes.has(file.name) ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+                      className={`flex items-center gap-1.5 transition-colors shrink-0 ${
+                        userLikes.has(file.name) ? 'text-red-500' : 'text-muted-foreground/60 hover:text-red-500'
                       }`}
                     >
-                      <Heart className="h-4 w-4" fill={userLikes.has(file.name) ? 'currentColor' : 'none'} />
-                      <span className="text-xs tabular-nums">{trackLikes[file.name] || 0}</span>
+                      <Heart className="h-[18px] w-[18px]" fill={userLikes.has(file.name) ? 'currentColor' : 'none'} />
+                      <span className="text-[12px] tabular-nums font-medium">{trackLikes[file.name] || 0}</span>
                     </button>
-                    <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
+                    <span className="text-[13px] text-muted-foreground/70 tabular-nums w-12 text-right font-medium">
                       {file.duration}
                     </span>
                   </div>
