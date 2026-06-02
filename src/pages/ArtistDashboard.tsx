@@ -47,7 +47,7 @@ const ArtistDashboard = () => {
         .from('admin_settings')
         .select('*')
         .eq('admin_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (settings) {
         setProjectName(settings.project_name || 'Music Project');
