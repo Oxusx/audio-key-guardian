@@ -6,48 +6,101 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Shield, User } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
+
+/**
+ * Creator auth.
+ * - Sign up: creates an auth user + an artist_profile (their own /username page).
+ * - Sign in: routes platform admins to /admin, creators to /artist-dashboard.
+ * Platform admin role is managed manually by the project owner — there is no
+ * public way to become a platform admin from this page.
+ */
+
+const USERNAME_RE = /^[a-z0-9_-]{3,30}$/;
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
+
+  // After a successful login, send admins to /admin and creators to their dashboard.
+  const routeAfterLogin = async (userId: string) => {
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    if (roles?.role === 'admin') {
+      navigate('/admin');
+      return;
+    }
+
+    // Creator path — make sure they have a profile, then go to dashboard
+    const { data: profile } = await supabase
+      .from('artist_profiles')
+      .select('username')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (profile?.username) {
+      navigate('/artist-dashboard');
+    } else {
+      // Profile is missing (e.g. signup before email confirm) — bounce to dashboard,
+      // which will guide them to complete setup.
+      navigate('/artist-dashboard');
+    }
+  };
 
   useEffect(() => {
-    // Check if already authenticated
-    const checkAuth = async () => {
+    (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Check if admin
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        if (roles?.role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/');
-        }
-      }
-    };
-    checkAuth();
-  }, [navigate]);
+      if (session) routeAfterLogin(session.user.id);
+    })();
+  }, []);
 
-  const handleAdminAuth = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isSignUp) {
         if (password !== confirmPassword) {
+          toast({ title: 'Passwords do not match', variant: 'destructive' });
+          return;
+        }
+        const handle = username.trim().toLowerCase();
+        if (!USERNAME_RE.test(handle)) {
           toast({
-            title: 'Passwords do not match',
+            title: 'Invalid username',
+            description: '3–30 characters: letters, numbers, dashes, underscores.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        if (!displayName.trim()) {
+          toast({ title: 'Display name required', variant: 'destructive' });
+          return;
+        }
+
+        // Check username availability up front for a clearer error
+        const { data: taken } = await supabase
+          .from('artist_profiles')
+          .select('id')
+          .eq('username', handle)
+          .maybeSingle();
+        if (taken) {
+          toast({
+            title: 'Username taken',
+            description: 'Please choose a different username.',
             variant: 'destructive',
           });
           return;
@@ -57,61 +110,72 @@ const Auth = () => {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/admin`,
+            emailRedirectTo: `${window.location.origin}/artist-dashboard`,
+            data: { username: handle, display_name: displayName.trim() },
           },
         });
-
         if (error) throw error;
 
-        if (data.user) {
-          // Bootstrap the first admin via secure server-side function.
-          // This only succeeds when no admin exists yet; subsequent admins
-          // must be assigned by an existing admin.
-          if (data.session) {
-            const { error: bootstrapError } = await supabase.rpc('bootstrap_first_admin');
-            if (bootstrapError && !/Admin already exists/i.test(bootstrapError.message)) {
-              throw bootstrapError;
-            }
-          }
+        // If email confirmation is OFF, we have a session now and can create the profile.
+        if (data.session && data.user) {
+          const { error: profileError } = await supabase
+            .from('artist_profiles')
+            .insert({
+              user_id: data.user.id,
+              username: handle,
+              display_name: displayName.trim(),
+              is_public: true,
+              require_key: false,
+            });
+          if (profileError) throw profileError;
 
           toast({
-            title: 'Admin account created',
-            description: data.session
-              ? 'Your admin account is ready.'
-              : 'Please check your email to confirm your account, then sign in.',
+            title: 'Welcome!',
+            description: `Your page is live at /${handle}.`,
           });
+          navigate('/artist-dashboard');
+          return;
         }
+
+        // Email confirmation required — profile is created on first sign-in.
+        toast({
+          title: 'Check your email',
+          description: 'Confirm your account to activate your page.',
+        });
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
-
         if (error) throw error;
 
-        // Verify admin role
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', data.user.id)
-          .single();
+        // If this user signed up but their profile wasn't created yet (email-confirm
+        // flow), create it now using the metadata captured at signup.
+        if (data.user) {
+          const meta = (data.user.user_metadata || {}) as {
+            username?: string;
+            display_name?: string;
+          };
+          if (meta.username && USERNAME_RE.test(meta.username)) {
+            const { data: existing } = await supabase
+              .from('artist_profiles')
+              .select('id')
+              .eq('user_id', data.user.id)
+              .maybeSingle();
 
-        if (roles?.role !== 'admin') {
-          await supabase.auth.signOut();
-          toast({
-            title: 'Access denied',
-            description: 'This account does not have admin privileges.',
-            variant: 'destructive',
-          });
-          return;
+            if (!existing) {
+              await supabase.from('artist_profiles').insert({
+                user_id: data.user.id,
+                username: meta.username,
+                display_name: meta.display_name || meta.username,
+                is_public: true,
+                require_key: false,
+              });
+            }
+          }
+
+          await routeAfterLogin(data.user.id);
         }
-
-        toast({
-          title: 'Welcome back',
-          description: 'Successfully signed in as admin.',
-        });
-
-        navigate('/admin');
       }
     } catch (error: any) {
       toast({
@@ -137,10 +201,10 @@ const Auth = () => {
 
       <Card className="w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <Shield className="h-12 w-12 text-primary mx-auto mb-4" />
-          <h1 className="text-3xl font-bold">Admin Portal</h1>
+          <User className="h-12 w-12 text-primary mx-auto mb-4" />
+          <h1 className="text-3xl font-bold">Creator Access</h1>
           <p className="text-muted-foreground mt-2">
-            Secure access for administrators only
+            Sign in to manage your page, or sign up to claim your own.
           </p>
         </div>
 
@@ -151,14 +215,14 @@ const Auth = () => {
           </TabsList>
 
           <TabsContent value="signin">
-            <form onSubmit={handleAdminAuth} className="space-y-4">
+            <form onSubmit={handleAuth} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Email</label>
                 <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@example.com"
+                  placeholder="you@example.com"
                   required
                 />
               </div>
@@ -192,14 +256,47 @@ const Auth = () => {
           </TabsContent>
 
           <TabsContent value="signup">
-            <form onSubmit={handleAdminAuth} className="space-y-4">
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Display Name</label>
+                <Input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Your name or brand"
+                  required
+                  maxLength={60}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Username</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">godscircle.ca/</span>
+                  <Input
+                    type="text"
+                    value={username}
+                    onChange={(e) =>
+                      setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))
+                    }
+                    placeholder="yourname"
+                    required
+                    minLength={3}
+                    maxLength={30}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  This will be your public page URL.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Email</label>
                 <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@example.com"
+                  placeholder="you@example.com"
                   required
                 />
               </div>
@@ -228,13 +325,8 @@ const Auth = () => {
                 />
               </div>
 
-              <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg text-xs text-muted-foreground">
-                <p className="font-semibold mb-1">⚠️ Admin Account</p>
-                <p>Only create an admin account if you are the project administrator.</p>
-              </div>
-
               <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
-                {loading ? 'Creating account...' : 'Create Admin Account'}
+                {loading ? 'Creating your page...' : 'Create My Page'}
               </Button>
             </form>
           </TabsContent>
