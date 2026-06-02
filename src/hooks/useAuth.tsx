@@ -22,7 +22,8 @@ export const useAuth = () => {
               .from('user_roles')
               .select('role')
               .eq('user_id', session.user.id)
-              .single();
+              .eq('role', 'admin')
+              .maybeSingle();
             
             setIsAdmin(roles?.role === 'admin');
             setLoading(false);
@@ -44,7 +45,8 @@ export const useAuth = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
-          .single()
+          .eq('role', 'admin')
+          .maybeSingle()
           .then(({ data: roles }) => {
             setIsAdmin(roles?.role === 'admin');
             setLoading(false);
