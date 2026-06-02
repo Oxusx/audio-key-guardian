@@ -18,7 +18,7 @@ import SalesAndPayouts from '@/components/admin/SalesAndPayouts';
 
 const ArtistDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { toast } = useToast();
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [artistProfileId, setArtistProfileId] = useState<string | undefined>();
@@ -33,8 +33,8 @@ const ArtistDashboard = () => {
 
 
   useEffect(() => {
-    if (!loading && !isAdmin) navigate('/auth');
-  }, [isAdmin, loading, navigate]);
+    if (!loading && !user) navigate('/auth');
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     if (user) loadAdminData();
@@ -47,7 +47,7 @@ const ArtistDashboard = () => {
         .from('admin_settings')
         .select('*')
         .eq('admin_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (settings) {
         setProjectName(settings.project_name || 'Music Project');
@@ -168,7 +168,7 @@ const ArtistDashboard = () => {
     );
   }
 
-  if (!isAdmin || !user) return null;
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 md:p-6">
