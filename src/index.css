@@ -136,6 +136,13 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-scarface;
+    @apply bg-background text-foreground font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    letter-spacing: -0.011em;
+  }
+  h1, h2, h3, h4, h5 {
+    letter-spacing: -0.022em;
   }
 }

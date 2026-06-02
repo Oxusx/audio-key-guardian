@@ -20,6 +20,8 @@ export default {
 		extend: {
 			fontFamily: {
 				scarface: ['Bebas Neue', 'sans-serif'],
+				display: ['Bebas Neue', 'sans-serif'],
+				sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'system-ui', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
