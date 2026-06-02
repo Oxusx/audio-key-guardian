@@ -97,13 +97,11 @@ const ArtistPage = () => {
 
       if (merchData) setMerch(merchData);
 
-      // Load cover art from admin settings
-      const { data: settings } = await supabase
-        .from('admin_settings')
-        .select('cover_art_url')
-        .eq('admin_id', profileData.user_id)
-        .single();
-
+      // Load cover art via secure RPC (only exposes safe public fields)
+      const { data: settingsRows } = await (supabase as any).rpc('get_public_admin_settings', {
+        admin_id_param: profileData.user_id,
+      });
+      const settings = Array.isArray(settingsRows) ? settingsRows[0] : settingsRows;
       if (settings?.cover_art_url) setCoverArt(settings.cover_art_url);
 
       // If no key required, load audio immediately
@@ -161,44 +159,35 @@ const ArtistPage = () => {
   ): Promise<boolean> => {
     const silent = opts.silent ?? false;
     try {
-      const { data: keyRow, error } = await supabase
-        .from('access_keys')
-        .select('*')
-        .eq('key_code', code.toUpperCase())
-        .eq('is_active', true)
-        .maybeSingle();
+      const { data: validation, error } = await (supabase as any).rpc('validate_artist_key', {
+        key_code_param: code,
+        artist_profile_id_param: profileData.id,
+      });
 
       if (error) throw error;
-      if (!keyRow) {
-        if (!silent) toast({ title: 'Invalid key', description: 'This key is not valid.', variant: 'destructive' });
+
+      const row = Array.isArray(validation) ? validation[0] : validation;
+      if (!row) {
+        if (!silent) toast({ title: 'Invalid key', description: 'This key is not valid for this artist.', variant: 'destructive' });
         return false;
       }
 
-      const belongsToArtist =
-        (keyRow as any).artist_profile_id === profileData.id ||
-        keyRow.created_by === profileData.user_id;
-
-      if (!belongsToArtist) {
-        if (!silent) toast({ title: 'Wrong artist', description: 'This key is not valid for this artist.', variant: 'destructive' });
-        return false;
-      }
-
-      if (keyRow.expires_at && new Date(keyRow.expires_at) < new Date()) {
-        if (!silent) toast({ title: 'Key expired', description: 'This key has expired.', variant: 'destructive' });
+      if (!row.is_valid) {
+        if (!silent) toast({ title: 'Key expired or inactive', description: 'This key is no longer valid.', variant: 'destructive' });
         return false;
       }
 
       setHasAccess(true);
       localStorage.setItem(`artist_access_${profileData.id}`, JSON.stringify({
-        accessType: keyRow.access_type,
-        expiresAt: keyRow.expires_at,
-        includesMerch: (keyRow as any).includes_merch,
+        accessType: row.access_type,
+        expiresAt: row.expires_at,
+        includesMerch: row.includes_merch,
         enteredAt: new Date().toISOString(),
       }));
 
       await loadAudioFiles(profileData.user_id);
       if (!silent) {
-        toast({ title: 'Access granted!', description: `${keyRow.access_type} access activated for ${profileData.display_name}.` });
+        toast({ title: 'Access granted!', description: `${row.access_type} access activated for ${profileData.display_name}.` });
       }
       return true;
     } catch (error: any) {
