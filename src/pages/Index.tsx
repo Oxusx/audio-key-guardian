@@ -335,12 +335,11 @@ const Index = () => {
   useEffect(() => {
     (async () => {
       try {
-        // Load admin settings to get cover art and project details
-        const { data: settings } = await supabase
-          .from('admin_settings')
-          .select('*')
-          .limit(1)
-          .single();
+        // Load public admin settings via secure RPC (only exposes safe fields)
+        const { data: settingsRows } = await (supabase as any).rpc('get_public_admin_settings', {
+          admin_id_param: null,
+        });
+        const settings = Array.isArray(settingsRows) ? settingsRows[0] : settingsRows;
 
         if (settings) {
           if (settings.cover_art_url) {
@@ -349,13 +348,9 @@ const Index = () => {
             setCoverArt(defaultCover);
           }
           setProjectName(settings.project_name || 'Music Project');
-          setTotalBudget(Number(settings.investment_budget) || 10000);
-          setAcceptInvestments(((settings as any).accept_investments ?? false) && Number(settings.investment_budget) > 0);
+          setAcceptInvestments(!!settings.accept_investments);
 
-          
-          // Store in localStorage for investment page
           localStorage.setItem('projectName', settings.project_name || 'Music Project');
-          localStorage.setItem('totalBudget', String(settings.investment_budget || 10000));
         } else {
           setCoverArt(defaultCover);
         }
