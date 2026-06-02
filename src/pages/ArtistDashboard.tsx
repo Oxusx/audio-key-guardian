@@ -168,7 +168,7 @@ const ArtistDashboard = () => {
     );
   }
 
-  if (!isAdmin || !user) return null;
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 md:p-6">
