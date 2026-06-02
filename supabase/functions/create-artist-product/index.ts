@@ -8,10 +8,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const adminToken = Deno.env.get('SHOPIFY_ADMIN_API_TOKEN');
+    const adminToken = Deno.env.get('SHOPIFY_ACCESS_TOKEN') || Deno.env.get('SHOPIFY_ADMIN_API_TOKEN');
     const supaUrl = Deno.env.get('SUPABASE_URL')!;
     const supaAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
-    if (!adminToken) throw new Error('SHOPIFY_ADMIN_API_TOKEN not configured');
+    if (!adminToken) throw new Error('Shopify admin token not configured');
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
