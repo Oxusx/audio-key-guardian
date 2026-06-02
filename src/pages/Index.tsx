@@ -386,32 +386,44 @@ const Index = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background relative">
-        {/* Admin Login Button - Top Right */}
-        <div className="absolute top-6 right-6">
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        {/* Ambient glow */}
+        <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-30 blur-[120px]"
+          style={{ background: 'radial-gradient(circle, hsl(var(--primary)) 0%, transparent 70%)' }}
+        />
+
+        <div className="absolute top-6 right-6 z-10">
           <Link to="/auth">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
+            <Button variant="ghost" size="sm" className="text-muted-foreground/60 hover:text-foreground">
               <Settings className="h-4 w-4" />
             </Button>
           </Link>
         </div>
 
-        {/* Main Password Entry */}
-        <div className="min-h-screen flex items-center justify-center p-6">
-          <div className="w-full max-w-md">
-            <form onSubmit={handlePasswordSubmit} className="space-y-6">
+        <div className="min-h-screen flex items-center justify-center p-6 relative">
+          <div className="w-full max-w-sm">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card/60 backdrop-blur-md ring-1 ring-white/5 mb-5">
+                <Key className="h-6 w-6 text-primary" />
+              </div>
+              <h1 className="text-[28px] font-bold tracking-tight">Enter Access Key</h1>
+              <p className="mt-2 text-[15px] text-muted-foreground">
+                Unlock your exclusive listening session
+              </p>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="space-y-3">
               <Input
                 id="password"
                 type="text"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="KEY"
-                className="text-center text-2xl font-mono tracking-widest h-16 bg-card/50 border-primary/30 focus:border-primary backdrop-blur-sm"
+                className="text-center text-xl font-mono tracking-[0.4em] h-14 bg-card/60 border-border/40 focus:border-primary backdrop-blur-md rounded-xl"
                 autoComplete="off"
                 autoFocus
               />
-              <Button type="submit" className="w-full" variant="gradient" size="lg">
-                <Unlock className="h-5 w-5" />
+              <Button type="submit" className="w-full h-12 rounded-xl text-[16px] font-semibold" variant="gradient">
+                <Unlock className="h-5 w-5 mr-2" /> Unlock
               </Button>
             </form>
           </div>
