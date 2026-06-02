@@ -661,6 +661,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_public_admin_settings: {
+        Args: { admin_id_param?: string }
+        Returns: {
+          accept_investments: boolean
+          admin_id: string
+          cover_art_url: string
+          project_name: string
+        }[]
+      }
       get_total_investments: { Args: never; Returns: number }
       get_track_like_count: {
         Args: { track_name_param: string }
@@ -682,6 +691,15 @@ export type Database = {
         Returns: {
           access_type: string
           expires_at: string
+          is_valid: boolean
+        }[]
+      }
+      validate_artist_key: {
+        Args: { artist_profile_id_param: string; key_code_param: string }
+        Returns: {
+          access_type: string
+          expires_at: string
+          includes_merch: boolean
           is_valid: boolean
         }[]
       }
