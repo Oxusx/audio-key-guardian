@@ -64,23 +64,21 @@ const Auth = () => {
         if (error) throw error;
 
         if (data.user) {
-          // Assign admin role (first user becomes admin automatically)
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({ user_id: data.user.id, role: 'admin' });
-
-          if (roleError) throw roleError;
-
-          // Create admin settings
-          const { error: settingsError } = await supabase
-            .from('admin_settings')
-            .insert({ admin_id: data.user.id });
-
-          if (settingsError) throw settingsError;
+          // Bootstrap the first admin via secure server-side function.
+          // This only succeeds when no admin exists yet; subsequent admins
+          // must be assigned by an existing admin.
+          if (data.session) {
+            const { error: bootstrapError } = await supabase.rpc('bootstrap_first_admin');
+            if (bootstrapError && !/Admin already exists/i.test(bootstrapError.message)) {
+              throw bootstrapError;
+            }
+          }
 
           toast({
             title: 'Admin account created',
-            description: 'Please check your email to confirm your account.',
+            description: data.session
+              ? 'Your admin account is ready.'
+              : 'Please check your email to confirm your account, then sign in.',
           });
         }
       } else {
