@@ -25,6 +25,7 @@ export type Database = {
           includes_merch: boolean
           is_active: boolean
           key_code: string
+          key_name: string | null
         }
         Insert: {
           access_type: string
@@ -36,6 +37,7 @@ export type Database = {
           includes_merch?: boolean
           is_active?: boolean
           key_code: string
+          key_name?: string | null
         }
         Update: {
           access_type?: string
@@ -47,6 +49,7 @@ export type Database = {
           includes_merch?: boolean
           is_active?: boolean
           key_code?: string
+          key_name?: string | null
         }
         Relationships: [
           {
