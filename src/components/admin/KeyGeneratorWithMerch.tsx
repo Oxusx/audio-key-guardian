@@ -33,6 +33,7 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
   const [keys, setKeys] = useState<AccessKey[]>([]);
   const [selectedAccessType, setSelectedAccessType] = useState<'24h' | '48h' | 'indefinite'>('24h');
   const [includesMerch, setIncludesMerch] = useState(false);
+  const [keyName, setKeyName] = useState('');
 
   useEffect(() => { loadKeys(); }, [userId]);
 
