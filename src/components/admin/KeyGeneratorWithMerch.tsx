@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Key, Clock, Infinity, Copy, Trash2, ShoppingBag } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,6 +19,7 @@ interface AccessKey {
   is_active: boolean;
   includes_merch?: boolean;
   artist_profile_id?: string | null;
+  key_name?: string | null;
 }
 
 interface KeyGeneratorWithMerchProps {
@@ -31,6 +33,7 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
   const [keys, setKeys] = useState<AccessKey[]>([]);
   const [selectedAccessType, setSelectedAccessType] = useState<'24h' | '48h' | 'indefinite'>('24h');
   const [includesMerch, setIncludesMerch] = useState(false);
+  const [keyName, setKeyName] = useState('');
 
   useEffect(() => { loadKeys(); }, [userId]);
 
@@ -62,13 +65,15 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
         created_by: userId,
         expires_at: expiresAt?.toISOString() || null,
         includes_merch: includesMerch,
+        key_name: keyName.trim() || null,
       };
       if (artistProfileId) insertData.artist_profile_id = artistProfileId;
 
       const { error } = await supabase.from('access_keys').insert(insertData);
       if (error) throw error;
 
-      toast({ title: 'Key generated', description: `${selectedAccessType} key: ${keyCode}${includesMerch ? ' (with merch)' : ''}` });
+      toast({ title: 'Key generated', description: `${keyName.trim() ? keyName.trim() + ': ' : ''}${keyCode}` });
+      setKeyName('');
       await loadKeys();
     } catch (error: any) {
       toast({ title: 'Generation failed', description: error.message, variant: 'destructive' });
@@ -102,6 +107,18 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
+          <Label>Key Label (optional)</Label>
+          <Input
+            value={keyName}
+            onChange={(e) => setKeyName(e.target.value)}
+            placeholder="e.g. VIP, Friends & Family, Press"
+            maxLength={50}
+            className="mt-1"
+          />
+          <p className="text-xs text-muted-foreground mt-1">A name to help you remember who this key is for</p>
+        </div>
+
+        <div>
           <Label>Access Duration</Label>
           <Select value={selectedAccessType} onValueChange={(v: any) => setSelectedAccessType(v)}>
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
@@ -133,6 +150,7 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
             <div key={k.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
+                  {k.key_name && <span className="text-sm font-semibold">{k.key_name}</span>}
                   <span className="font-mono font-bold text-sm">{k.key_code}</span>
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                     {k.access_type === 'indefinite' ? <Infinity className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
