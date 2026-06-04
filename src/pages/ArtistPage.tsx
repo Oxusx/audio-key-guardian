@@ -431,7 +431,7 @@ const ArtistPage = () => {
         )}
 
         {/* Merch Section */}
-        {(shopifyProducts.length > 0 || merch.length > 0 || productsLoading) && (
+        {showMerch && hasMerch && (
           <div ref={merchRef} className="scroll-mt-4">
 
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
