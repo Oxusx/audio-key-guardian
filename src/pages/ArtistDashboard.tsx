@@ -200,7 +200,7 @@ const ArtistDashboard = () => {
           onProfileSaved={(profile) => { setArtistProfileId(profile.id); setArtistUsername(profile.username); }}
         />
 
-        <ShopifyProductUploader userId={user.id} username={artistUsername} />
+        
 
         <SalesAndPayouts />
 
