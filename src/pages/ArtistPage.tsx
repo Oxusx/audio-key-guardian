@@ -90,6 +90,16 @@ const ArtistPage = () => {
   }, [username]);
 
   const loadArtistPage = async () => {
+    // Reset state so data from a previously-viewed artist doesn't leak through
+    setProfile(null);
+    setMerch([]);
+    setShopifyProducts([]);
+    setAudioFiles([]);
+    setCoverArt('');
+    setHasAccess(false);
+    setAccessKey('');
+    setNotFound(false);
+    setLoading(true);
     try {
       // Load artist profile
       const { data: profileData, error } = await (supabase as any)
