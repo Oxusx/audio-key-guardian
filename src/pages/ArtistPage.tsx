@@ -41,6 +41,27 @@ const ArtistPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const audio = useAudio();
+  const merchRef = React.useRef<HTMLDivElement>(null);
+  const tracksRef = React.useRef<HTMLDivElement>(null);
+  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
+
+  const hasBoth = audioFiles.length > 0 && shopifyProducts.length > 0;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start || !hasBoth) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (dx > 60 && Math.abs(dy) < 50) {
+      merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const [profile, setProfile] = useState<ArtistProfileData | null>(null);
   const [merch, setMerch] = useState<MerchItemData[]>([]);
