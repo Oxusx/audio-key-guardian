@@ -384,13 +384,14 @@ const ArtistPage = () => {
           <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Music className="h-5 w-5" /> Tracks
-              {hasBoth && (
+              {hasMerch && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
-                  onClick={() => merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  onClick={() => (showMerch ? setShowMerch(false) : revealMerch())}
+                  aria-expanded={showMerch}
                 >
                   <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Merch
                 </Button>
