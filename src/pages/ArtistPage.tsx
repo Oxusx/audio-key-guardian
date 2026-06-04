@@ -403,7 +403,8 @@ const ArtistPage = () => {
 
         {/* Merch Section — Shopify */}
         {(shopifyProducts.length > 0 || productsLoading) && (
-          <div>
+          <div ref={merchRef} className="scroll-mt-4">
+
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Merch
             </h2>
