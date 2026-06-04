@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS access_keys_key_code_unique ON public.access_keys (upper(key_code));
