@@ -28,6 +28,15 @@ interface AccessInfo {
   includesMerch?: boolean;
 }
 
+interface ResolvedAccessKey {
+  is_valid: boolean;
+  access_type: string;
+  expires_at: string | null;
+  artist_profile_id: string | null;
+  username: string | null;
+  includes_merch: boolean;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const audio = useAudio();
@@ -63,7 +72,11 @@ const Index = () => {
   const validatePassword = async (inputPassword: string) => {
     try {
       const normalizedKey = inputPassword.toUpperCase();
-      const { data: resolvedRows, error: resolveError } = await (supabase as any).rpc('resolve_access_key', {
+      const resolveAccessKey = supabase.rpc as unknown as (
+        fn: 'resolve_access_key',
+        args: { key_code_param: string }
+      ) => Promise<{ data: ResolvedAccessKey[] | ResolvedAccessKey | null; error: Error | null }>;
+      const { data: resolvedRows, error: resolveError } = await resolveAccessKey('resolve_access_key', {
         key_code_param: normalizedKey
       });
 
