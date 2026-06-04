@@ -54,12 +54,20 @@ const ArtistPage = () => {
   const [accessKey, setAccessKey] = useState('');
   const [hasAccess, setHasAccess] = useState(false);
   const [coverArt, setCoverArt] = useState<string>('');
+  const [showMerch, setShowMerch] = useState(false);
 
   const addToCart = useCartStore((s) => s.addItem);
   const cartLoading = useCartStore((s) => s.isLoading);
 
   const hasMerch = shopifyProducts.length > 0 || merch.length > 0;
   const hasBoth = audioFiles.length > 0 && hasMerch;
+
+  const revealMerch = () => {
+    setShowMerch(true);
+    setTimeout(() => {
+      merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -68,12 +76,13 @@ const ArtistPage = () => {
   const onTouchEnd = (e: React.TouchEvent) => {
     const start = touchStartRef.current;
     touchStartRef.current = null;
-    if (!start || !hasBoth) return;
+    if (!start || !hasMerch) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
-    if (dx > 60 && Math.abs(dy) < 50) {
-      merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (Math.abs(dx) > 60 && Math.abs(dy) < 50) {
+      if (dx < 0) revealMerch();
+      else setShowMerch(false);
     }
   };
 
@@ -375,13 +384,14 @@ const ArtistPage = () => {
           <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Music className="h-5 w-5" /> Tracks
-              {hasBoth && (
+              {hasMerch && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
-                  onClick={() => merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  onClick={() => (showMerch ? setShowMerch(false) : revealMerch())}
+                  aria-expanded={showMerch}
                 >
                   <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Merch
                 </Button>
@@ -421,7 +431,7 @@ const ArtistPage = () => {
         )}
 
         {/* Merch Section */}
-        {(shopifyProducts.length > 0 || merch.length > 0 || productsLoading) && (
+        {showMerch && hasMerch && (
           <div ref={merchRef} className="scroll-mt-4">
 
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
