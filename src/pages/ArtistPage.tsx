@@ -58,7 +58,7 @@ const ArtistPage = () => {
   const addToCart = useCartStore((s) => s.addItem);
   const cartLoading = useCartStore((s) => s.isLoading);
 
-  const hasBoth = audioFiles.length > 0 && shopifyProducts.length > 0;
+  const hasBoth = audioFiles.length > 0 && (shopifyProducts.length > 0 || merch.length > 0);
 
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
