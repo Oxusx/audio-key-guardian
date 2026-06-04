@@ -54,12 +54,20 @@ const ArtistPage = () => {
   const [accessKey, setAccessKey] = useState('');
   const [hasAccess, setHasAccess] = useState(false);
   const [coverArt, setCoverArt] = useState<string>('');
+  const [showMerch, setShowMerch] = useState(false);
 
   const addToCart = useCartStore((s) => s.addItem);
   const cartLoading = useCartStore((s) => s.isLoading);
 
   const hasMerch = shopifyProducts.length > 0 || merch.length > 0;
   const hasBoth = audioFiles.length > 0 && hasMerch;
+
+  const revealMerch = () => {
+    setShowMerch(true);
+    setTimeout(() => {
+      merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -68,12 +76,13 @@ const ArtistPage = () => {
   const onTouchEnd = (e: React.TouchEvent) => {
     const start = touchStartRef.current;
     touchStartRef.current = null;
-    if (!start || !hasBoth) return;
+    if (!start || !hasMerch) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
-    if (dx > 60 && Math.abs(dy) < 50) {
-      merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (Math.abs(dx) > 60 && Math.abs(dy) < 50) {
+      if (dx < 0) revealMerch();
+      else setShowMerch(false);
     }
   };
 
