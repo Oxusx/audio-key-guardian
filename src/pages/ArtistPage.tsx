@@ -42,8 +42,21 @@ const ArtistPage = () => {
   const { toast } = useToast();
   const audio = useAudio();
   const merchRef = React.useRef<HTMLDivElement>(null);
-  const tracksRef = React.useRef<HTMLDivElement>(null);
   const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
+
+  const [profile, setProfile] = useState<ArtistProfileData | null>(null);
+  const [merch, setMerch] = useState<MerchItemData[]>([]);
+  const [shopifyProducts, setShopifyProducts] = useState<ShopifyProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [audioFiles, setAudioFiles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [accessKey, setAccessKey] = useState('');
+  const [hasAccess, setHasAccess] = useState(false);
+  const [coverArt, setCoverArt] = useState<string>('');
+
+  const addToCart = useCartStore((s) => s.addItem);
+  const cartLoading = useCartStore((s) => s.isLoading);
 
   const hasBoth = audioFiles.length > 0 && shopifyProducts.length > 0;
 
@@ -62,20 +75,6 @@ const ArtistPage = () => {
       merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
-
-  const [profile, setProfile] = useState<ArtistProfileData | null>(null);
-  const [merch, setMerch] = useState<MerchItemData[]>([]);
-  const [shopifyProducts, setShopifyProducts] = useState<ShopifyProduct[]>([]);
-  const [productsLoading, setProductsLoading] = useState(false);
-  const [audioFiles, setAudioFiles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [accessKey, setAccessKey] = useState('');
-  const [hasAccess, setHasAccess] = useState(false);
-  const [coverArt, setCoverArt] = useState<string>('');
-
-  const addToCart = useCartStore((s) => s.addItem);
-  const cartLoading = useCartStore((s) => s.isLoading);
 
   useEffect(() => {
     if (username) loadArtistPage();
