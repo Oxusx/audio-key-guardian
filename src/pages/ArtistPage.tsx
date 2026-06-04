@@ -361,9 +361,12 @@ const ArtistPage = () => {
 
         {/* Track List */}
         {hasAccess && audioFiles.length > 0 && (
-          <div>
+          <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Music className="h-5 w-5" /> Tracks
+              {hasBoth && (
+                <span className="ml-auto text-xs font-normal text-muted-foreground">Swipe right for merch →</span>
+              )}
             </h2>
             <div className="space-y-1">
               {audioFiles.map((file, index) => (
