@@ -57,11 +57,15 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
     try {
       let imageUrl = newItem.image_url;
       if (imageFile) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('You must be signed in to upload images.');
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `merch/${artistProfileId}/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('cover-art').upload(fileName, imageFile);
+        const fileName = `${user.id}/${artistProfileId}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('merch-images')
+          .upload(fileName, imageFile, { upsert: false });
         if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('cover-art').getPublicUrl(fileName);
+        const { data: { publicUrl } } = supabase.storage.from('merch-images').getPublicUrl(fileName);
         imageUrl = publicUrl;
       }
       const { error } = await (supabase as any).from('merch_items').insert({
