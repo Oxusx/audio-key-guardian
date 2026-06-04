@@ -690,6 +690,17 @@ export type Database = {
         Args: { session_id_param: string; track_name_param: string }
         Returns: boolean
       }
+      resolve_access_key: {
+        Args: { key_code_param: string }
+        Returns: {
+          access_type: string
+          artist_profile_id: string
+          expires_at: string
+          includes_merch: boolean
+          is_valid: boolean
+          username: string
+        }[]
+      }
       validate_access_key: {
         Args: { key_code_param: string }
         Returns: {

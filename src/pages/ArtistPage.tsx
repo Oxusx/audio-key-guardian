@@ -58,7 +58,8 @@ const ArtistPage = () => {
   const addToCart = useCartStore((s) => s.addItem);
   const cartLoading = useCartStore((s) => s.isLoading);
 
-  const hasBoth = audioFiles.length > 0 && (shopifyProducts.length > 0 || merch.length > 0);
+  const hasMerch = shopifyProducts.length > 0 || merch.length > 0;
+  const hasBoth = audioFiles.length > 0 && hasMerch;
 
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -375,7 +376,15 @@ const ArtistPage = () => {
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Music className="h-5 w-5" /> Tracks
               {hasBoth && (
-                <span className="ml-auto text-xs font-normal text-muted-foreground">Swipe right for merch →</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
+                  onClick={() => merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                >
+                  <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Merch
+                </Button>
               )}
             </h2>
             <div className="space-y-1">

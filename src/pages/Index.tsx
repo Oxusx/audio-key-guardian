@@ -23,6 +23,18 @@ interface AccessInfo {
   accessType: '24h' | '48h' | 'indefinite';
   expiresAt: Date | null;
   isValid: boolean;
+  artistProfileId?: string;
+  artistUsername?: string;
+  includesMerch?: boolean;
+}
+
+interface ResolvedAccessKey {
+  is_valid: boolean;
+  access_type: string;
+  expires_at: string | null;
+  artist_profile_id: string | null;
+  username: string | null;
+  includes_merch: boolean;
 }
 
 const Index = () => {
@@ -59,8 +71,31 @@ const Index = () => {
   // Validate password against database
   const validatePassword = async (inputPassword: string) => {
     try {
+      const normalizedKey = inputPassword.toUpperCase();
+      const resolveAccessKey = supabase.rpc as unknown as (
+        fn: 'resolve_access_key',
+        args: { key_code_param: string }
+      ) => Promise<{ data: ResolvedAccessKey[] | ResolvedAccessKey | null; error: Error | null }>;
+      const { data: resolvedRows, error: resolveError } = await resolveAccessKey('resolve_access_key', {
+        key_code_param: normalizedKey
+      });
+
+      if (resolveError) throw resolveError;
+
+      const resolved = Array.isArray(resolvedRows) ? resolvedRows[0] : resolvedRows;
+      if (resolved?.is_valid && resolved.username && resolved.artist_profile_id) {
+        return {
+          accessType: resolved.access_type as '24h' | '48h' | 'indefinite',
+          expiresAt: resolved.expires_at ? new Date(resolved.expires_at) : null,
+          isValid: true,
+          artistProfileId: resolved.artist_profile_id,
+          artistUsername: resolved.username,
+          includesMerch: !!resolved.includes_merch,
+        };
+      }
+
       const { data, error } = await supabase.rpc('validate_access_key', {
-        key_code_param: inputPassword.toUpperCase()
+        key_code_param: normalizedKey
       });
 
       if (error) throw error;
@@ -97,6 +132,22 @@ const Index = () => {
     const accessData = await validatePassword(password);
     
     if (accessData) {
+      if (accessData.artistProfileId && accessData.artistUsername) {
+        localStorage.setItem(`artist_access_${accessData.artistProfileId}`, JSON.stringify({
+          accessType: accessData.accessType,
+          expiresAt: accessData.expiresAt?.toISOString() || null,
+          includesMerch: accessData.includesMerch,
+          enteredAt: new Date().toISOString(),
+        }));
+
+        toast({
+          title: "Access granted",
+          description: "Opening the creator page now.",
+        });
+        navigate(`/${encodeURIComponent(accessData.artistUsername)}`);
+        return;
+      }
+
       setAccessInfo(accessData);
       setIsAuthenticated(true);
       
