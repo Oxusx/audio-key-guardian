@@ -71,16 +71,16 @@ const Index = () => {
   // Validate password against database
   const validatePassword = async (inputPassword: string) => {
     try {
-      const normalizedKey = inputPassword.toUpperCase();
-      const resolveAccessKey = supabase.rpc as unknown as (
-        fn: 'resolve_access_key',
-        args: { key_code_param: string }
-      ) => Promise<{ data: ResolvedAccessKey[] | ResolvedAccessKey | null; error: Error | null }>;
-      const { data: resolvedRows, error: resolveError } = await resolveAccessKey('resolve_access_key', {
-        key_code_param: normalizedKey
-      });
+      const normalizedKey = inputPassword.trim().toUpperCase();
 
-      if (resolveError) throw resolveError;
+      const { data: resolvedRows, error: resolveError } = await supabase.rpc(
+        'resolve_access_key',
+        { key_code_param: normalizedKey }
+      );
+
+      if (resolveError) {
+        console.error('resolve_access_key error:', resolveError);
+      }
 
       const resolved = Array.isArray(resolvedRows) ? resolvedRows[0] : resolvedRows;
       if (resolved?.is_valid && resolved.username && resolved.artist_profile_id) {
@@ -116,6 +116,7 @@ const Index = () => {
       return null;
     }
   };
+
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
