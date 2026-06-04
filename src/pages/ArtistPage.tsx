@@ -411,18 +411,45 @@ const ArtistPage = () => {
           </div>
         )}
 
-        {/* Merch Section — Shopify */}
-        {(shopifyProducts.length > 0 || productsLoading) && (
+        {/* Merch Section */}
+        {(shopifyProducts.length > 0 || merch.length > 0 || productsLoading) && (
           <div ref={merchRef} className="scroll-mt-4">
 
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Merch
             </h2>
-            {productsLoading ? (
+            {productsLoading && shopifyProducts.length === 0 && merch.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {merch.map((m) => (
+                  <Card key={m.id} className="overflow-hidden bg-card/50 backdrop-blur-sm">
+                    {m.image_url && <img src={m.image_url} alt={m.name} className="w-full h-48 object-cover" />}
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">{m.name}</h3>
+                        <Badge variant="secondary">${Number(m.price).toFixed(2)}</Badge>
+                      </div>
+                      {m.description && (
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{m.description}</p>
+                      )}
+                      {m.external_link ? (
+                        <a href={m.external_link} target="_blank" rel="noopener noreferrer">
+                          <Button variant="gradient" size="sm" className="w-full">
+                            <ExternalLink className="h-4 w-4 mr-2" /> Buy Now
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button variant="gradient" size="sm" className="w-full" disabled>
+                          Coming Soon
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {shopifyProducts.map((p) => {
                   const variant = p.node.variants.edges[0]?.node;
