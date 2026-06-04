@@ -107,6 +107,18 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
+          <Label>Key Label (optional)</Label>
+          <Input
+            value={keyName}
+            onChange={(e) => setKeyName(e.target.value)}
+            placeholder="e.g. VIP, Friends & Family, Press"
+            maxLength={50}
+            className="mt-1"
+          />
+          <p className="text-xs text-muted-foreground mt-1">A name to help you remember who this key is for</p>
+        </div>
+
+        <div>
           <Label>Access Duration</Label>
           <Select value={selectedAccessType} onValueChange={(v: any) => setSelectedAccessType(v)}>
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
