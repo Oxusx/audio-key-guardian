@@ -449,8 +449,6 @@ const ArtistPage = () => {
                     </div>
                   </Card>
                 ))}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {shopifyProducts.map((p) => {
                   const variant = p.node.variants.edges[0]?.node;
                   const img = p.node.images.edges[0]?.node;
@@ -498,6 +496,7 @@ const ArtistPage = () => {
                 })}
               </div>
             )}
+
           </div>
         )}
 
