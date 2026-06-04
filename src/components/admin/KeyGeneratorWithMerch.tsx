@@ -53,33 +53,81 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
     }
   };
 
+  const generateUniqueCode = () => Math.random().toString(36).substr(2, 8).toUpperCase();
+
   const generateKey = async () => {
-    const keyCode = Math.random().toString(36).substr(2, 8).toUpperCase();
     const now = new Date();
     let expiresAt: Date | null = null;
-
     if (selectedAccessType === '24h') expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     else if (selectedAccessType === '48h') expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
     try {
-      const insertData: any = {
-        key_code: keyCode,
-        access_type: selectedAccessType,
-        created_by: userId,
-        expires_at: expiresAt?.toISOString() || null,
-        includes_merch: includesMerch,
-        key_name: keyName.trim() || null,
-      };
-      if (artistProfileId) insertData.artist_profile_id = artistProfileId;
+      let lastError: any = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const keyCode = generateUniqueCode();
+        const insertData: any = {
+          key_code: keyCode,
+          access_type: selectedAccessType,
+          created_by: userId,
+          expires_at: expiresAt?.toISOString() || null,
+          includes_merch: includesMerch,
+          key_name: keyName.trim() || null,
+        };
+        if (artistProfileId) insertData.artist_profile_id = artistProfileId;
 
-      const { error } = await supabase.from('access_keys').insert(insertData);
-      if (error) throw error;
-
-      toast({ title: 'Key generated', description: `${keyName.trim() ? keyName.trim() + ': ' : ''}${keyCode}` });
-      setKeyName('');
-      await loadKeys();
+        const { error } = await supabase.from('access_keys').insert(insertData);
+        if (!error) {
+          toast({ title: 'Key generated', description: `${keyName.trim() ? keyName.trim() + ': ' : ''}${keyCode}` });
+          setKeyName('');
+          await loadKeys();
+          return;
+        }
+        lastError = error;
+        // Only retry on unique violation
+        if (error.code !== '23505') break;
+      }
+      throw lastError || new Error('Could not generate a unique key, please try again.');
     } catch (error: any) {
       toast({ title: 'Generation failed', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const startEdit = (k: AccessKey) => {
+    setEditingId(k.id);
+    setEditName(k.key_name || '');
+    setEditCode(k.key_code);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName('');
+    setEditCode('');
+  };
+
+  const saveEdit = async (id: string) => {
+    const newCode = editCode.trim().toUpperCase();
+    if (!newCode) {
+      toast({ title: 'Invalid', description: 'Key code cannot be empty.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('access_keys')
+        .update({ key_name: editName.trim() || null, key_code: newCode })
+        .eq('id', id);
+      if (error) {
+        if (error.code === '23505') {
+          toast({ title: 'Duplicate', description: 'That key code is already in use. Try another.', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
+      }
+      toast({ title: 'Key updated' });
+      cancelEdit();
+      await loadKeys();
+    } catch (error: any) {
+      toast({ title: 'Update failed', description: error.message, variant: 'destructive' });
     }
   };
 
