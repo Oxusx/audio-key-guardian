@@ -41,6 +41,8 @@ const ArtistPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const audio = useAudio();
+  const merchRef = React.useRef<HTMLDivElement>(null);
+  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
 
   const [profile, setProfile] = useState<ArtistProfileData | null>(null);
   const [merch, setMerch] = useState<MerchItemData[]>([]);
@@ -55,6 +57,24 @@ const ArtistPage = () => {
 
   const addToCart = useCartStore((s) => s.addItem);
   const cartLoading = useCartStore((s) => s.isLoading);
+
+  const hasBoth = audioFiles.length > 0 && shopifyProducts.length > 0;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start || !hasBoth) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (dx > 60 && Math.abs(dy) < 50) {
+      merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   useEffect(() => {
     if (username) loadArtistPage();
@@ -341,9 +361,12 @@ const ArtistPage = () => {
 
         {/* Track List */}
         {hasAccess && audioFiles.length > 0 && (
-          <div>
+          <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Music className="h-5 w-5" /> Tracks
+              {hasBoth && (
+                <span className="ml-auto text-xs font-normal text-muted-foreground">Swipe right for merch →</span>
+              )}
             </h2>
             <div className="space-y-1">
               {audioFiles.map((file, index) => (
@@ -380,7 +403,8 @@ const ArtistPage = () => {
 
         {/* Merch Section — Shopify */}
         {(shopifyProducts.length > 0 || productsLoading) && (
-          <div>
+          <div ref={merchRef} className="scroll-mt-4">
+
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Merch
             </h2>
