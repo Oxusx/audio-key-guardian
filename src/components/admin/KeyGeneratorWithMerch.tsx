@@ -198,33 +198,64 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
 
         <div className="space-y-2 max-h-64 overflow-y-auto">
           {keys.map((k) => (
-            <div key={k.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div key={k.id} className="flex items-center justify-between p-3 bg-muted rounded-lg gap-2">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {k.key_name && <span className="text-sm font-semibold">{k.key_name}</span>}
-                  <span className="font-mono font-bold text-sm">{k.key_code}</span>
-                  <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                    {k.access_type === 'indefinite' ? <Infinity className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                    {k.access_type}
-                  </Badge>
-                  {k.includes_merch && (
-                    <Badge variant="outline" className="text-xs">
-                      <ShoppingBag className="h-3 w-3 mr-1" /> Merch
-                    </Badge>
-                  )}
-                  {!k.is_active && <Badge variant="destructive" className="text-xs">Inactive</Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(k.created_at).toLocaleDateString()}
-                  {k.expires_at && ` • Expires: ${new Date(k.expires_at).toLocaleDateString()}`}
-                </p>
+                {editingId === k.id ? (
+                  <div className="space-y-2">
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Label (optional)"
+                      maxLength={50}
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      value={editCode}
+                      onChange={(e) => setEditCode(e.target.value.toUpperCase())}
+                      placeholder="Key code"
+                      maxLength={20}
+                      className="h-8 text-sm font-mono"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {k.key_name && <span className="text-sm font-semibold">{k.key_name}</span>}
+                      <span className="font-mono font-bold text-sm">{k.key_code}</span>
+                      <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                        {k.access_type === 'indefinite' ? <Infinity className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                        {k.access_type}
+                      </Badge>
+                      {k.includes_merch && (
+                        <Badge variant="outline" className="text-xs">
+                          <ShoppingBag className="h-3 w-3 mr-1" /> Merch
+                        </Badge>
+                      )}
+                      {!k.is_active && <Badge variant="destructive" className="text-xs">Inactive</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(k.created_at).toLocaleDateString()}
+                      {k.expires_at && ` • Expires: ${new Date(k.expires_at).toLocaleDateString()}`}
+                    </p>
+                  </>
+                )}
               </div>
               <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="sm" onClick={() => copyKey(k.key_code)}><Copy className="h-3.5 w-3.5" /></Button>
-                {k.is_active && (
-                  <Button variant="ghost" size="sm" onClick={() => deactivateKey(k.id)}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
+                {editingId === k.id ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => saveEdit(k.id)}><Check className="h-3.5 w-3.5 text-primary" /></Button>
+                    <Button variant="ghost" size="sm" onClick={cancelEdit}><X className="h-3.5 w-3.5" /></Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => copyKey(k.key_code)}><Copy className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => startEdit(k)}><Pencil className="h-3.5 w-3.5" /></Button>
+                    {k.is_active && (
+                      <Button variant="ghost" size="sm" onClick={() => deactivateKey(k.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
