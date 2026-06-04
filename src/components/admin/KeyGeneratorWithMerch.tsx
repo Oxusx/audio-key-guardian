@@ -65,13 +65,15 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
         created_by: userId,
         expires_at: expiresAt?.toISOString() || null,
         includes_merch: includesMerch,
+        key_name: keyName.trim() || null,
       };
       if (artistProfileId) insertData.artist_profile_id = artistProfileId;
 
       const { error } = await supabase.from('access_keys').insert(insertData);
       if (error) throw error;
 
-      toast({ title: 'Key generated', description: `${selectedAccessType} key: ${keyCode}${includesMerch ? ' (with merch)' : ''}` });
+      toast({ title: 'Key generated', description: `${keyName.trim() ? keyName.trim() + ': ' : ''}${keyCode}` });
+      setKeyName('');
       await loadKeys();
     } catch (error: any) {
       toast({ title: 'Generation failed', description: error.message, variant: 'destructive' });
