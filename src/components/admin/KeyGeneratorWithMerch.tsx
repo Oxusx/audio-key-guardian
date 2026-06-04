@@ -150,6 +150,7 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
             <div key={k.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
+                  {k.key_name && <span className="text-sm font-semibold">{k.key_name}</span>}
                   <span className="font-mono font-bold text-sm">{k.key_code}</span>
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                     {k.access_type === 'indefinite' ? <Infinity className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
