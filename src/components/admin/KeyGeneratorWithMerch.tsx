@@ -19,6 +19,7 @@ interface AccessKey {
   is_active: boolean;
   includes_merch?: boolean;
   artist_profile_id?: string | null;
+  key_name?: string | null;
 }
 
 interface KeyGeneratorWithMerchProps {
