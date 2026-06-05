@@ -667,7 +667,20 @@ const ArtistPage = () => {
                         <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{m.description}</p>
                       )}
                       {m.external_link ? (
-                        <a href={m.external_link} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={m.external_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            track('merch_item_clicked', {
+                              source: 'external_link',
+                              item_id: m.id,
+                              item_name: m.name,
+                              price: Number(m.price),
+                              last_song_played: lastSongPlayedRef.current,
+                            })
+                          }
+                        >
                           <Button variant="gradient" size="sm" className="w-full">
                             <ExternalLink className="h-4 w-4 mr-2" /> Buy Now
                           </Button>
