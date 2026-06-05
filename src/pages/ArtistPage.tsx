@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { fetchProductsByArtist, ShopifyProduct } from '@/lib/shopify';
 import { useCartStore } from '@/stores/cartStore';
 import { CartDrawer } from '@/components/shop/CartDrawer';
 import Footer from '@/components/Footer';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface ArtistProfileData {
   id: string;
@@ -41,6 +42,7 @@ const ArtistPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const audio = useAudio();
+  const { trackEvent } = useAnalytics();
   const merchRef = React.useRef<HTMLDivElement>(null);
   const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
 
@@ -63,8 +65,39 @@ const ArtistPage = () => {
   const hasMerch = shopifyProducts.length > 0 || merch.length > 0;
   const hasBoth = audioFiles.length > 0 && hasMerch;
 
+  // --- Analytics refs (avoid re-renders) ---
+  const sessionStartRef = useRef<number | null>(null);
+  const usedKeyRef = useRef<string | null>(null);
+  const lastTrackIdRef = useRef<string | null>(null);
+  const trackStartRef = useRef<number | null>(null);
+  const lastSongPlayedRef = useRef<string | null>(null); // last song before merch nav
+  const firstPurchaseLoggedRef = useRef(false);
+
+  // Helper: enrich every event with artist + key context
+  const track = React.useCallback(
+    (event_type: string, data: Record<string, any> = {}) => {
+      trackEvent({
+        event_type,
+        event_data: {
+          artist_username: username || null,
+          artist_profile_id: profile?.id || null,
+          project_name: projectName || null,
+          access_key: usedKeyRef.current,
+          ...data,
+        },
+      });
+    },
+    [trackEvent, username, profile?.id, projectName]
+  );
+
   const revealMerch = () => {
     setShowMerch(true);
+    lastSongPlayedRef.current = audio.currentTrack?.name || null;
+    track('merch_viewed', {
+      source: 'button',
+      last_song_played: lastSongPlayedRef.current,
+      merch_count: shopifyProducts.length + merch.length,
+    });
     setTimeout(() => {
       merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
@@ -82,8 +115,23 @@ const ArtistPage = () => {
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
     if (Math.abs(dx) > 60 && Math.abs(dy) < 50) {
-      if (dx < 0) revealMerch();
-      else setShowMerch(false);
+      if (dx < 0) {
+        if (!showMerch) {
+          setShowMerch(true);
+          lastSongPlayedRef.current = audio.currentTrack?.name || null;
+          track('merch_viewed', {
+            source: 'swipe',
+            last_song_played: lastSongPlayedRef.current,
+            merch_count: shopifyProducts.length + merch.length,
+          });
+          setTimeout(() => merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        }
+      } else {
+        if (showMerch) {
+          setShowMerch(false);
+          track('nav_to_tracks', { source: 'swipe' });
+        }
+      }
     }
   };
 
@@ -210,23 +258,68 @@ const ArtistPage = () => {
       if (error) throw error;
 
       const row = Array.isArray(validation) ? validation[0] : validation;
+      if (!row || !row.is_valid) {
+        trackEvent({
+          event_type: 'key_entered',
+          event_data: {
+            artist_username: profileData.username,
+            artist_profile_id: profileData.id,
+            access_key: code,
+            success: false,
+            reason: !row ? 'invalid' : 'expired_or_inactive',
+            source: silent ? 'url' : 'form',
+            referrer: document.referrer || null,
+          },
+        });
+      }
       if (!row) {
         if (!silent) toast({ title: 'Invalid key', description: 'This key is not valid for this artist.', variant: 'destructive' });
         return false;
       }
-
       if (!row.is_valid) {
         if (!silent) toast({ title: 'Key expired or inactive', description: 'This key is no longer valid.', variant: 'destructive' });
         return false;
       }
 
       setHasAccess(true);
+      usedKeyRef.current = code;
+      sessionStartRef.current = Date.now();
       localStorage.setItem(`artist_access_${profileData.id}`, JSON.stringify({
         accessType: row.access_type,
         expiresAt: row.expires_at,
         includesMerch: row.includes_merch,
         enteredAt: new Date().toISOString(),
       }));
+
+      // Returning vs new key holder
+      const visitsKey = `artist_visits_${profileData.id}_${code}`;
+      const priorVisits = parseInt(localStorage.getItem(visitsKey) || '0', 10);
+      localStorage.setItem(visitsKey, String(priorVisits + 1));
+
+      trackEvent({
+        event_type: 'key_entered',
+        event_data: {
+          artist_username: profileData.username,
+          artist_profile_id: profileData.id,
+          access_key: code,
+          access_type: row.access_type,
+          includes_merch: row.includes_merch,
+          success: true,
+          source: silent ? 'url' : 'form',
+          referrer: document.referrer || null,
+          is_returning: priorVisits > 0,
+          visit_count: priorVisits + 1,
+        },
+      });
+      trackEvent({
+        event_type: 'session_start',
+        event_data: {
+          artist_username: profileData.username,
+          artist_profile_id: profileData.id,
+          access_key: code,
+          is_returning: priorVisits > 0,
+        },
+      });
 
       await loadAudioFiles(profileData.user_id);
       if (!silent) {
@@ -246,15 +339,80 @@ const ArtistPage = () => {
   };
 
   const playTrack = async (file: any) => {
-    const track = {
+    const isReplay = lastTrackIdRef.current === file.id;
+    const isSkip =
+      lastTrackIdRef.current !== null &&
+      lastTrackIdRef.current !== file.id &&
+      trackStartRef.current !== null &&
+      audio.duration > 0 &&
+      audio.currentTime < audio.duration - 1;
+
+    if (isSkip) {
+      track('track_skipped', {
+        from_track_id: lastTrackIdRef.current,
+        played_seconds: Math.round(audio.currentTime),
+        track_duration: Math.round(audio.duration),
+      });
+    }
+    if (isReplay) {
+      track('track_replayed', { track_id: file.id, track_name: file.file_name });
+    }
+
+    track('track_played', {
+      track_id: file.id,
+      track_name: file.file_name,
+      replay: isReplay,
+    });
+
+    lastTrackIdRef.current = file.id;
+    trackStartRef.current = Date.now();
+
+    const trackObj = {
       id: file.id,
       name: file.file_name,
       duration: file.duration || '0:00',
       size: file.file_size || '',
       url: file.file_url,
     };
-    await audio.playTrack(track);
+    await audio.playTrack(trackObj);
   };
+
+  // Listen for track completion + tab close for session metrics
+  useEffect(() => {
+    const el = audio.audioRef.current;
+    if (!el) return;
+    const onEnded = () => {
+      if (lastTrackIdRef.current) {
+        track('track_completed', { track_id: lastTrackIdRef.current });
+      }
+    };
+    el.addEventListener('ended', onEnded);
+    return () => el.removeEventListener('ended', onEnded);
+  }, [audio.audioRef, track]);
+
+  useEffect(() => {
+    const flushSession = () => {
+      if (!sessionStartRef.current || !profile) return;
+      const duration = Math.round((Date.now() - sessionStartRef.current) / 1000);
+      trackEvent({
+        event_type: 'session_end',
+        event_data: {
+          artist_username: profile.username,
+          artist_profile_id: profile.id,
+          access_key: usedKeyRef.current,
+          duration_seconds: duration,
+          ended_on: showMerch ? 'merch' : 'tracks',
+        },
+      });
+    };
+    window.addEventListener('beforeunload', flushSession);
+    window.addEventListener('pagehide', flushSession);
+    return () => {
+      window.removeEventListener('beforeunload', flushSession);
+      window.removeEventListener('pagehide', flushSession);
+      flushSession();
+    };
+  }, [profile, showMerch, trackEvent]);
 
   const trackList = audioFiles.map((f) => ({
     id: f.id,
@@ -263,6 +421,24 @@ const ArtistPage = () => {
     size: f.file_size || '',
     url: f.file_url,
   }));
+
+  // Start a session when access is granted via paths that bypass tryUnlock (no-key, stored access)
+  useEffect(() => {
+    if (hasAccess && sessionStartRef.current === null && profile) {
+      sessionStartRef.current = Date.now();
+      trackEvent({
+        event_type: 'session_start',
+        event_data: {
+          artist_username: profile.username,
+          artist_profile_id: profile.id,
+          access_key: usedKeyRef.current,
+          source: 'stored_or_public',
+          referrer: document.referrer || null,
+        },
+      });
+    }
+  }, [hasAccess, profile, trackEvent]);
+
 
   if (loading) {
     return (
@@ -296,6 +472,7 @@ const ArtistPage = () => {
             variant="ghost"
             size="sm"
             onClick={() => {
+              track('logout', { ended_on: showMerch ? 'merch' : 'tracks' });
               localStorage.removeItem('audioAccessInfo');
               toast({ title: 'Logged out', description: 'Enter a new key to access different content.' });
               navigate('/');
@@ -468,7 +645,7 @@ const ArtistPage = () => {
                 variant="ghost"
                 size="sm"
                 className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
-                onClick={() => setShowMerch(false)}
+                onClick={() => { setShowMerch(false); track('nav_to_tracks', { source: 'button' }); }}
               >
                 <Music className="h-3.5 w-3.5 mr-1" /> Tracks
               </Button>
@@ -491,7 +668,20 @@ const ArtistPage = () => {
                         <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{m.description}</p>
                       )}
                       {m.external_link ? (
-                        <a href={m.external_link} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={m.external_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            track('merch_item_clicked', {
+                              source: 'external_link',
+                              item_id: m.id,
+                              item_name: m.name,
+                              price: Number(m.price),
+                              last_song_played: lastSongPlayedRef.current,
+                            })
+                          }
+                        >
                           <Button variant="gradient" size="sm" className="w-full">
                             <ExternalLink className="h-4 w-4 mr-2" /> Buy Now
                           </Button>
@@ -526,7 +716,16 @@ const ArtistPage = () => {
                           size="sm"
                           className="w-full"
                           disabled={!variant.availableForSale || cartLoading}
-                          onClick={() =>
+                          onClick={() => {
+                            track('merch_item_clicked', {
+                              source: 'add_to_cart',
+                              item_id: p.node.id,
+                              item_name: p.node.title,
+                              variant_id: variant.id,
+                              price: parseFloat(variant.price.amount),
+                              currency: variant.price.currencyCode,
+                              last_song_played: lastSongPlayedRef.current,
+                            });
                             addToCart({
                               product: p,
                               variantId: variant.id,
@@ -534,8 +733,8 @@ const ArtistPage = () => {
                               price: variant.price,
                               quantity: 1,
                               selectedOptions: variant.selectedOptions || [],
-                            })
-                          }
+                            });
+                          }}
                         >
                           {cartLoading ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -561,7 +760,7 @@ const ArtistPage = () => {
             <button
               type="button"
               aria-label="Show tracks"
-              onClick={() => setShowMerch(false)}
+              onClick={() => { setShowMerch(false); track('nav_to_tracks', { source: 'dot' }); }}
               className={`h-2 rounded-full transition-all ${!showMerch ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/40'}`}
             />
             <button
