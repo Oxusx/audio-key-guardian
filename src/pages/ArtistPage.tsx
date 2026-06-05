@@ -377,23 +377,96 @@ const ArtistPage = () => {
     await audio.playTrack(trackObj);
   };
 
-  // Listen for track completion + tab close for session metrics
+  // Audio listeners: heartbeats (25/50/75%), completion, seek, volume, errors, stalls
   useEffect(() => {
     const el = audio.audioRef.current;
     if (!el) return;
+    const milestonesSent: Record<string, Set<number>> = {};
+    let lastSeekTime = 0;
+    let lastVolume = el.volume;
+    let lastMuted = el.muted;
+
     const onEnded = () => {
-      if (lastTrackIdRef.current) {
-        track('track_completed', { track_id: lastTrackIdRef.current });
+      if (lastTrackIdRef.current) track('track_completed', { track_id: lastTrackIdRef.current });
+    };
+    const onTimeUpdate = () => {
+      const id = lastTrackIdRef.current;
+      if (!id || !el.duration || !isFinite(el.duration)) return;
+      const pct = (el.currentTime / el.duration) * 100;
+      if (!milestonesSent[id]) milestonesSent[id] = new Set();
+      [25, 50, 75].forEach((m) => {
+        if (pct >= m && !milestonesSent[id].has(m)) {
+          milestonesSent[id].add(m);
+          track('track_progress', { track_id: id, milestone: m });
+        }
+      });
+      lastSeekTime = el.currentTime;
+    };
+    const onSeeking = () => {
+      const id = lastTrackIdRef.current;
+      if (!id) return;
+      const delta = el.currentTime - lastSeekTime;
+      if (Math.abs(delta) > 2) {
+        track('track_seek', {
+          track_id: id,
+          from: Math.round(lastSeekTime),
+          to: Math.round(el.currentTime),
+          direction: delta > 0 ? 'forward' : 'backward',
+        });
       }
     };
+    const onVolumeChange = () => {
+      if (el.muted !== lastMuted) {
+        track('audio_mute_toggle', { muted: el.muted });
+        lastMuted = el.muted;
+      } else if (Math.abs(el.volume - lastVolume) > 0.05) {
+        track('volume_change', { volume: Math.round(el.volume * 100) });
+        lastVolume = el.volume;
+      }
+    };
+    const onError = () => {
+      track('audio_error', {
+        track_id: lastTrackIdRef.current,
+        code: el.error?.code,
+        message: el.error?.message,
+      });
+    };
+    const onStalled = () => track('audio_stalled', { track_id: lastTrackIdRef.current });
+    const onWaiting = () => track('audio_waiting', { track_id: lastTrackIdRef.current });
+
     el.addEventListener('ended', onEnded);
-    return () => el.removeEventListener('ended', onEnded);
+    el.addEventListener('timeupdate', onTimeUpdate);
+    el.addEventListener('seeking', onSeeking);
+    el.addEventListener('volumechange', onVolumeChange);
+    el.addEventListener('error', onError);
+    el.addEventListener('stalled', onStalled);
+    el.addEventListener('waiting', onWaiting);
+    return () => {
+      el.removeEventListener('ended', onEnded);
+      el.removeEventListener('timeupdate', onTimeUpdate);
+      el.removeEventListener('seeking', onSeeking);
+      el.removeEventListener('volumechange', onVolumeChange);
+      el.removeEventListener('error', onError);
+      el.removeEventListener('stalled', onStalled);
+      el.removeEventListener('waiting', onWaiting);
+    };
   }, [audio.audioRef, track]);
+
+  // Visibility (foreground/background) — distinguishes idle vs active listening
+  useEffect(() => {
+    const onVis = () => {
+      if (!profile) return;
+      track(document.visibilityState === 'visible' ? 'tab_focused' : 'tab_hidden', {});
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [profile, track]);
 
   useEffect(() => {
     const flushSession = () => {
       if (!sessionStartRef.current || !profile) return;
       const duration = Math.round((Date.now() - sessionStartRef.current) / 1000);
+      const addedToCart = sessionStorage.getItem('cart_added_no_checkout') === '1';
       trackEvent({
         event_type: 'session_end',
         event_data: {
@@ -402,8 +475,20 @@ const ArtistPage = () => {
           access_key: usedKeyRef.current,
           duration_seconds: duration,
           ended_on: showMerch ? 'merch' : 'tracks',
+          cart_abandoned: addedToCart,
         },
       });
+      if (addedToCart) {
+        trackEvent({
+          event_type: 'cart_abandoned',
+          event_data: {
+            artist_username: profile.username,
+            artist_profile_id: profile.id,
+            access_key: usedKeyRef.current,
+            session_duration: duration,
+          },
+        });
+      }
     };
     window.addEventListener('beforeunload', flushSession);
     window.addEventListener('pagehide', flushSession);
