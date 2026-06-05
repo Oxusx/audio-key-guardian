@@ -715,7 +715,16 @@ const ArtistPage = () => {
                           size="sm"
                           className="w-full"
                           disabled={!variant.availableForSale || cartLoading}
-                          onClick={() =>
+                          onClick={() => {
+                            track('merch_item_clicked', {
+                              source: 'add_to_cart',
+                              item_id: p.node.id,
+                              item_name: p.node.title,
+                              variant_id: variant.id,
+                              price: parseFloat(variant.price.amount),
+                              currency: variant.price.currencyCode,
+                              last_song_played: lastSongPlayedRef.current,
+                            });
                             addToCart({
                               product: p,
                               variantId: variant.id,
@@ -723,8 +732,8 @@ const ArtistPage = () => {
                               price: variant.price,
                               quantity: 1,
                               selectedOptions: variant.selectedOptions || [],
-                            })
-                          }
+                            });
+                          }}
                         >
                           {cartLoading ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
