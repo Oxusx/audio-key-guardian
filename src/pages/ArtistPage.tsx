@@ -823,45 +823,65 @@ const ArtistPage = () => {
                   const img = p.node.images.edges[0]?.node;
                   if (!variant) return null;
                   return (
-                    <Card key={p.node.id} className="overflow-hidden bg-card/50 backdrop-blur-sm">
-                      {img && <img src={img.url} alt={p.node.title} className="w-full h-48 object-cover" />}
-                      <div className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{p.node.title}</h3>
-                          <Badge variant="secondary">
-                            {variant.price.currencyCode} {parseFloat(variant.price.amount).toFixed(2)}
-                          </Badge>
-                        </div>
-                        {p.node.description && (
-                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{p.node.description}</p>
+                    <MerchImpression
+                      key={p.node.id}
+                      onImpression={() =>
+                        track('merch_card_impression', {
+                          source: 'shopify',
+                          item_id: p.node.id,
+                          item_name: p.node.title,
+                          price: parseFloat(variant.price.amount),
+                          currency: variant.price.currencyCode,
+                        })
+                      }
+                    >
+                      <Card className="overflow-hidden bg-card/50 backdrop-blur-sm">
+                        {img && (
+                          <img
+                            src={img.url}
+                            alt={p.node.title}
+                            className="w-full h-48 object-cover"
+                            onError={() => track('image_load_error', { source: 'merch_shopify', item_id: p.node.id })}
+                          />
                         )}
-                        <Button
-                          variant="gradient"
-                          size="sm"
-                          className="w-full"
-                          disabled={!variant.availableForSale || cartLoading}
-                          onClick={() => {
-                            track('merch_item_clicked', {
-                              source: 'add_to_cart',
-                              item_id: p.node.id,
-                              item_name: p.node.title,
-                              variant_id: variant.id,
-                              price: parseFloat(variant.price.amount),
-                              currency: variant.price.currencyCode,
-                              last_song_played: lastSongPlayedRef.current,
-                            });
-                            addToCart({
-                              product: p,
-                              variantId: variant.id,
-                              variantTitle: variant.title,
-                              price: variant.price,
-                              quantity: 1,
-                              selectedOptions: variant.selectedOptions || [],
-                            });
-                          }}
-                        >
-                          {cartLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold">{p.node.title}</h3>
+                            <Badge variant="secondary">
+                              {variant.price.currencyCode} {parseFloat(variant.price.amount).toFixed(2)}
+                            </Badge>
+                          </div>
+                          {p.node.description && (
+                            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{p.node.description}</p>
+                          )}
+                          <Button
+                            variant="gradient"
+                            size="sm"
+                            className="w-full"
+                            disabled={!variant.availableForSale || cartLoading}
+                            onClick={() => {
+                              track('merch_item_clicked', {
+                                source: 'add_to_cart',
+                                item_id: p.node.id,
+                                item_name: p.node.title,
+                                variant_id: variant.id,
+                                price: parseFloat(variant.price.amount),
+                                currency: variant.price.currencyCode,
+                                last_song_played: lastSongPlayedRef.current,
+                              });
+                              sessionStorage.setItem('cart_added_no_checkout', '1');
+                              addToCart({
+                                product: p,
+                                variantId: variant.id,
+                                variantTitle: variant.title,
+                                price: variant.price,
+                                quantity: 1,
+                                selectedOptions: variant.selectedOptions || [],
+                              });
+                            }}
+                          >
+                            {cartLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
                           ) : variant.availableForSale ? (
                             <><ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart</>
                           ) : (
