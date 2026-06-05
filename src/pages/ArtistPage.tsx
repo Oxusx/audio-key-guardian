@@ -472,6 +472,7 @@ const ArtistPage = () => {
             variant="ghost"
             size="sm"
             onClick={() => {
+              track('logout', { ended_on: showMerch ? 'merch' : 'tracks' });
               localStorage.removeItem('audioAccessInfo');
               toast({ title: 'Logged out', description: 'Enter a new key to access different content.' });
               navigate('/');
