@@ -384,43 +384,40 @@ const ArtistPage = () => {
 
         {/* Track List */}
         {hasAccess && audioFiles.length > 0 && !showMerch && (
-          <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Music className="h-5 w-5" /> Tracks
-              {hasMerch && (
+          <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="pt-2">
+            {hasMerch && (
+              <div className="flex justify-end mb-2">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
+                  className="h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
                   onClick={revealMerch}
                 >
                   <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Merch
                 </Button>
-              )}
-            </h2>
-            <div className="space-y-1">
-              {audioFiles.map((file, index) => (
-                <div
-                  key={file.id}
-                  className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
-                    audio.currentTrack?.id === file.id ? 'bg-primary/10' : 'hover:bg-muted/30'
-                  }`}
-                  onClick={() => playTrack(file)}
-                >
-                  <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-medium truncate ${audio.currentTrack?.id === file.id ? 'text-primary' : ''}`}>
-                      {file.file_name}
-                    </p>
+              </div>
+            )}
+            <div className="divide-y divide-border/40">
+              {audioFiles.map((file, index) => {
+                const isCurrent = audio.currentTrack?.id === file.id;
+                return (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-4 py-3 cursor-pointer"
+                    onClick={() => playTrack(file)}
+                  >
+                    <span className={`text-base w-6 text-center ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {isCurrent && audio.isPlaying ? <Pause className="h-4 w-4 mx-auto" fill="currentColor" /> : index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-base truncate ${isCurrent ? 'text-primary font-medium' : 'text-foreground'}`}>
+                        {file.file_name}
+                      </p>
+                    </div>
                   </div>
-                  {audio.currentTrack?.id === file.id && audio.isPlaying ? (
-                    <Pause className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Play className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
