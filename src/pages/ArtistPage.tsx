@@ -54,6 +54,7 @@ const ArtistPage = () => {
   const [accessKey, setAccessKey] = useState('');
   const [hasAccess, setHasAccess] = useState(false);
   const [coverArt, setCoverArt] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>('');
   const [showMerch, setShowMerch] = useState(false);
 
   const addToCart = useCartStore((s) => s.addItem);
