@@ -37,6 +37,31 @@ interface MerchItemData {
   is_available: boolean;
 }
 
+// Fires once when a merch card first enters the viewport
+const MerchImpression = ({ onImpression, children }: { onImpression: () => void; children: React.ReactNode }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const firedRef = useRef(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || firedRef.current) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting && !firedRef.current) {
+            firedRef.current = true;
+            onImpression();
+            obs.disconnect();
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [onImpression]);
+  return <div ref={ref}>{children}</div>;
+};
+
 const ArtistPage = () => {
   const { username, projectKey } = useParams<{ username: string; projectKey?: string }>();
   const navigate = useNavigate();
