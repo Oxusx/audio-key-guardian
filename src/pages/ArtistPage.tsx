@@ -625,22 +625,22 @@ const ArtistPage = () => {
         {!showMerch && Object.values(socialLinks).some(Boolean) && (
           <div className="flex gap-2 flex-wrap justify-center">
             {socialLinks.instagram && (
-              <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer">
+              <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" onClick={() => track('social_link_clicked', { platform: 'instagram' })}>
                 <Button variant="outline" size="sm"><Instagram className="h-4 w-4 mr-1" /> Instagram</Button>
               </a>
             )}
             {socialLinks.twitter && (
-              <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer">
+              <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" onClick={() => track('social_link_clicked', { platform: 'twitter' })}>
                 <Button variant="outline" size="sm"><Twitter className="h-4 w-4 mr-1" /> Twitter</Button>
               </a>
             )}
             {socialLinks.youtube && (
-              <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer">
+              <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" onClick={() => track('social_link_clicked', { platform: 'youtube' })}>
                 <Button variant="outline" size="sm"><Youtube className="h-4 w-4 mr-1" /> YouTube</Button>
               </a>
             )}
             {socialLinks.website && (
-              <a href={socialLinks.website} target="_blank" rel="noopener noreferrer">
+              <a href={socialLinks.website} target="_blank" rel="noopener noreferrer" onClick={() => track('social_link_clicked', { platform: 'website' })}>
                 <Button variant="outline" size="sm"><Globe className="h-4 w-4 mr-1" /> Website</Button>
               </a>
             )}
