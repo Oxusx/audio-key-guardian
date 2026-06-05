@@ -767,42 +767,56 @@ const ArtistPage = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {merch.map((m) => (
-                  <Card key={m.id} className="overflow-hidden bg-card/50 backdrop-blur-sm">
-                    {m.image_url && <img src={m.image_url} alt={m.name} className="w-full h-48 object-cover" />}
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">{m.name}</h3>
-                        <Badge variant="secondary">${Number(m.price).toFixed(2)}</Badge>
-                      </div>
-                      {m.description && (
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{m.description}</p>
+                  <MerchImpression
+                    key={m.id}
+                    onImpression={() =>
+                      track('merch_card_impression', { source: 'local', item_id: m.id, item_name: m.name, price: Number(m.price) })
+                    }
+                  >
+                    <Card className="overflow-hidden bg-card/50 backdrop-blur-sm">
+                      {m.image_url && (
+                        <img
+                          src={m.image_url}
+                          alt={m.name}
+                          className="w-full h-48 object-cover"
+                          onError={() => track('image_load_error', { source: 'merch_local', item_id: m.id })}
+                        />
                       )}
-                      {m.external_link ? (
-                        <a
-                          href={m.external_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() =>
-                            track('merch_item_clicked', {
-                              source: 'external_link',
-                              item_id: m.id,
-                              item_name: m.name,
-                              price: Number(m.price),
-                              last_song_played: lastSongPlayedRef.current,
-                            })
-                          }
-                        >
-                          <Button variant="gradient" size="sm" className="w-full">
-                            <ExternalLink className="h-4 w-4 mr-2" /> Buy Now
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">{m.name}</h3>
+                          <Badge variant="secondary">${Number(m.price).toFixed(2)}</Badge>
+                        </div>
+                        {m.description && (
+                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{m.description}</p>
+                        )}
+                        {m.external_link ? (
+                          <a
+                            href={m.external_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() =>
+                              track('merch_item_clicked', {
+                                source: 'external_link',
+                                item_id: m.id,
+                                item_name: m.name,
+                                price: Number(m.price),
+                                last_song_played: lastSongPlayedRef.current,
+                              })
+                            }
+                          >
+                            <Button variant="gradient" size="sm" className="w-full">
+                              <ExternalLink className="h-4 w-4 mr-2" /> Buy Now
+                            </Button>
+                          </a>
+                        ) : (
+                          <Button variant="gradient" size="sm" className="w-full" disabled>
+                            Coming Soon
                           </Button>
-                        </a>
-                      ) : (
-                        <Button variant="gradient" size="sm" className="w-full" disabled>
-                          Coming Soon
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
+                        )}
+                      </div>
+                    </Card>
+                  </MerchImpression>
                 ))}
                 {shopifyProducts.map((p) => {
                   const variant = p.node.variants.edges[0]?.node;
