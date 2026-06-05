@@ -286,62 +286,54 @@ const ArtistPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header / Profile Section */}
-      <div className="relative">
-        {profile.banner_image_url && (
-          <div className="h-48 w-full overflow-hidden">
-            <img src={profile.banner_image_url} alt="Banner" className="w-full h-full object-cover" />
-          </div>
+      {/* Top utility bar */}
+      <div className="px-4 pt-4 pb-2 flex items-center justify-end gap-2 max-w-3xl mx-auto">
+        {hasAccess && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem('audioAccessInfo');
+              toast({ title: 'Logged out', description: 'Enter a new key to access different content.' });
+              navigate('/');
+            }}
+            title="Logout and enter a new key"
+            className="text-muted-foreground"
+          >
+            <LogOut className="h-4 w-4 mr-1" /> Logout
+          </Button>
         )}
-        <div className={`px-6 ${profile.banner_image_url ? '-mt-8' : 'pt-6'}`}>
-          <div className="max-w-3xl mx-auto flex items-center gap-3">
-            {(coverArt || profile.profile_image_url) ? (
-              <img
-                src={coverArt || profile.profile_image_url || ''}
-                alt={profile.display_name}
-                className="w-12 h-12 rounded-full border-2 border-background object-cover shadow-md"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full border-2 border-background bg-primary/10 flex items-center justify-center shadow-md">
-                <Music className="h-5 w-5 text-primary" />
-              </div>
-            )}
-            <div className="flex-1 flex items-center justify-between">
-              <div className="min-w-0">
-                <h1 className="text-sm font-semibold truncate">{profile.display_name}</h1>
-                <p className="text-muted-foreground text-xs truncate">@{profile.username}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {hasAccess && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      localStorage.removeItem('audioAccessInfo');
-                      toast({ title: 'Logged out', description: 'Enter a new key to access different content.' });
-                      navigate('/');
-                    }}
-                    title="Logout and enter a new key"
-                  >
-                    <LogOut className="h-4 w-4 mr-1" /> Logout
-                  </Button>
-                )}
-                <CartDrawer />
-              </div>
-            </div>
-          </div>
-        </div>
+        <CartDrawer />
       </div>
 
-      <div className="max-w-3xl mx-auto px-6 py-6 space-y-8">
+      <div className="max-w-3xl mx-auto px-6 pb-32 space-y-6">
+        {/* Cover Art (large, centered) */}
+        {!showMerch && (coverArt || profile.profile_image_url) && (
+          <div className="max-w-[320px] mx-auto pt-2">
+            <img
+              src={coverArt || profile.profile_image_url || ''}
+              alt={profile.display_name}
+              className="w-full aspect-square object-cover rounded-xl shadow-2xl"
+            />
+          </div>
+        )}
+
+        {/* Title block */}
+        {!showMerch && (
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight uppercase">{profile.display_name}</h1>
+            <p className="text-primary text-lg font-medium">@{profile.username}</p>
+          </div>
+        )}
+
         {/* Bio */}
-        {profile.bio && (
-          <p className="text-foreground/80 leading-relaxed">{profile.bio}</p>
+        {profile.bio && !showMerch && (
+          <p className="text-foreground/80 leading-relaxed text-sm text-center">{profile.bio}</p>
         )}
 
         {/* Social Links */}
-        {Object.values(socialLinks).some(Boolean) && (
-          <div className="flex gap-3 flex-wrap">
+        {!showMerch && Object.values(socialLinks).some(Boolean) && (
+          <div className="flex gap-2 flex-wrap justify-center">
             {socialLinks.instagram && (
               <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm"><Instagram className="h-4 w-4 mr-1" /> Instagram</Button>
@@ -365,12 +357,7 @@ const ArtistPage = () => {
           </div>
         )}
 
-        {/* Cover Art */}
-        {coverArt && (
-          <div className="max-w-sm mx-auto">
-            <img src={coverArt} alt="Album Cover" className="w-full aspect-square object-cover rounded-2xl shadow-glow" />
-          </div>
-        )}
+
 
         {/* Access Key Input (if required) */}
         {profile.require_key && !hasAccess && (
