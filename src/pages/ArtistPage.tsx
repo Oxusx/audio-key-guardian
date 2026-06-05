@@ -759,7 +759,7 @@ const ArtistPage = () => {
             <button
               type="button"
               aria-label="Show tracks"
-              onClick={() => setShowMerch(false)}
+              onClick={() => { setShowMerch(false); track('nav_to_tracks', { source: 'dot' }); }}
               className={`h-2 rounded-full transition-all ${!showMerch ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/40'}`}
             />
             <button
