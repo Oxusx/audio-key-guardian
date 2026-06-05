@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, Heart, Unlock, Instagram, Twitter, Youtube, Globe, ShoppingBag, ExternalLink, Music, SkipForward, Loader2, ShoppingCart, LogOut } from 'lucide-react';
+import { Play, Pause, Heart, Unlock, Instagram, Twitter, Youtube, Globe, ShoppingBag, ExternalLink, Music, SkipForward, Loader2, ShoppingCart, LogOut, Shuffle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAudio } from '@/contexts/AudioContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,6 +54,7 @@ const ArtistPage = () => {
   const [accessKey, setAccessKey] = useState('');
   const [hasAccess, setHasAccess] = useState(false);
   const [coverArt, setCoverArt] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>('');
   const [showMerch, setShowMerch] = useState(false);
 
   const addToCart = useCartStore((s) => s.addItem);
@@ -106,6 +107,7 @@ const ArtistPage = () => {
     setShopifyProducts([]);
     setAudioFiles([]);
     setCoverArt('');
+    setProjectName('');
     setHasAccess(false);
     setAccessKey('');
     setNotFound(false);
@@ -143,6 +145,7 @@ const ArtistPage = () => {
       });
       const settings = Array.isArray(settingsRows) ? settingsRows[0] : settingsRows;
       if (settings?.cover_art_url) setCoverArt(settings.cover_art_url);
+      if (settings?.project_name) setProjectName(settings.project_name);
 
       // If no key required, load audio immediately
       if (!profileData.require_key) {
@@ -321,8 +324,33 @@ const ArtistPage = () => {
         {/* Title block */}
         {!showMerch && (
           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight uppercase">{profile.display_name}</h1>
-            <p className="text-primary text-lg font-medium">@{profile.username}</p>
+            <h1 className="text-2xl font-bold tracking-tight uppercase">
+              {projectName || profile.display_name}
+            </h1>
+            <p className="text-primary text-lg font-medium">{profile.display_name}</p>
+          </div>
+        )}
+
+        {/* Play / Shuffle */}
+        {hasAccess && audioFiles.length > 0 && !showMerch && (
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <Button
+              variant="secondary"
+              className="h-12 bg-card text-primary hover:bg-card/80 font-semibold text-base"
+              onClick={() => audioFiles[0] && playTrack(audioFiles[0])}
+            >
+              <Play className="h-5 w-5 mr-2" fill="currentColor" /> Play
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-12 bg-card text-primary hover:bg-card/80 font-semibold text-base"
+              onClick={() => {
+                const rand = audioFiles[Math.floor(Math.random() * audioFiles.length)];
+                if (rand) playTrack(rand);
+              }}
+            >
+              <Shuffle className="h-5 w-5 mr-2" /> Shuffle
+            </Button>
           </div>
         )}
 
