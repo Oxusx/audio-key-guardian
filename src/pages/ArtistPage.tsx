@@ -293,23 +293,23 @@ const ArtistPage = () => {
             <img src={profile.banner_image_url} alt="Banner" className="w-full h-full object-cover" />
           </div>
         )}
-        <div className={`px-6 ${profile.banner_image_url ? '-mt-16' : 'pt-8'}`}>
-          <div className="max-w-3xl mx-auto flex items-end gap-4">
-            {profile.profile_image_url ? (
+        <div className={`px-6 ${profile.banner_image_url ? '-mt-8' : 'pt-6'}`}>
+          <div className="max-w-3xl mx-auto flex items-center gap-3">
+            {(coverArt || profile.profile_image_url) ? (
               <img
-                src={profile.profile_image_url}
+                src={coverArt || profile.profile_image_url || ''}
                 alt={profile.display_name}
-                className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-background object-cover shadow-lg"
+                className="w-12 h-12 rounded-full border-2 border-background object-cover shadow-md"
               />
             ) : (
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-background bg-primary/10 flex items-center justify-center shadow-lg">
-                <Music className="h-10 w-10 text-primary" />
+              <div className="w-12 h-12 rounded-full border-2 border-background bg-primary/10 flex items-center justify-center shadow-md">
+                <Music className="h-5 w-5 text-primary" />
               </div>
             )}
-            <div className="pb-2 flex-1 flex items-end justify-between">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold">{profile.display_name}</h1>
-                <p className="text-muted-foreground text-sm">@{profile.username}</p>
+            <div className="flex-1 flex items-center justify-between">
+              <div className="min-w-0">
+                <h1 className="text-sm font-semibold truncate">{profile.display_name}</h1>
+                <p className="text-muted-foreground text-xs truncate">@{profile.username}</p>
               </div>
               <div className="flex items-center gap-2">
                 {hasAccess && (
@@ -396,7 +396,7 @@ const ArtistPage = () => {
         )}
 
         {/* Track List */}
-        {hasAccess && audioFiles.length > 0 && (
+        {hasAccess && audioFiles.length > 0 && !showMerch && (
           <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Music className="h-5 w-5" /> Tracks
@@ -406,8 +406,7 @@ const ArtistPage = () => {
                   variant="ghost"
                   size="sm"
                   className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
-                  onClick={() => (showMerch ? setShowMerch(false) : revealMerch())}
-                  aria-expanded={showMerch}
+                  onClick={revealMerch}
                 >
                   <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Merch
                 </Button>
@@ -439,7 +438,7 @@ const ArtistPage = () => {
           </div>
         )}
 
-        {hasAccess && audioFiles.length === 0 && (
+        {hasAccess && audioFiles.length === 0 && !showMerch && (
           <div className="text-center py-8">
             <Music className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No tracks available yet</p>
@@ -448,10 +447,19 @@ const ArtistPage = () => {
 
         {/* Merch Section */}
         {showMerch && hasMerch && (
-          <div ref={merchRef} className="scroll-mt-4">
+          <div ref={merchRef} className="scroll-mt-4" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Merch
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
+                onClick={() => setShowMerch(false)}
+              >
+                <Music className="h-3.5 w-3.5 mr-1" /> Tracks
+              </Button>
             </h2>
             {productsLoading && shopifyProducts.length === 0 && merch.length === 0 ? (
               <div className="flex items-center justify-center py-8">
@@ -532,6 +540,24 @@ const ArtistPage = () => {
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* Page indicator dots */}
+        {hasAccess && hasMerch && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              type="button"
+              aria-label="Show tracks"
+              onClick={() => setShowMerch(false)}
+              className={`h-2 rounded-full transition-all ${!showMerch ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/40'}`}
+            />
+            <button
+              type="button"
+              aria-label="Show merch"
+              onClick={revealMerch}
+              className={`h-2 rounded-full transition-all ${showMerch ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/40'}`}
+            />
           </div>
         )}
 
