@@ -145,6 +145,7 @@ const ArtistPage = () => {
       });
       const settings = Array.isArray(settingsRows) ? settingsRows[0] : settingsRows;
       if (settings?.cover_art_url) setCoverArt(settings.cover_art_url);
+      if (settings?.project_name) setProjectName(settings.project_name);
 
       // If no key required, load audio immediately
       if (!profileData.require_key) {
