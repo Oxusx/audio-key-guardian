@@ -422,6 +422,24 @@ const ArtistPage = () => {
     url: f.file_url,
   }));
 
+  // Start a session when access is granted via paths that bypass tryUnlock (no-key, stored access)
+  useEffect(() => {
+    if (hasAccess && sessionStartRef.current === null && profile) {
+      sessionStartRef.current = Date.now();
+      trackEvent({
+        event_type: 'session_start',
+        event_data: {
+          artist_username: profile.username,
+          artist_profile_id: profile.id,
+          access_key: usedKeyRef.current,
+          source: 'stored_or_public',
+          referrer: document.referrer || null,
+        },
+      });
+    }
+  }, [hasAccess, profile, trackEvent]);
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
