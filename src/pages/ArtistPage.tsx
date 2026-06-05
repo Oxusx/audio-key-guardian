@@ -293,23 +293,23 @@ const ArtistPage = () => {
             <img src={profile.banner_image_url} alt="Banner" className="w-full h-full object-cover" />
           </div>
         )}
-        <div className={`px-6 ${profile.banner_image_url ? '-mt-16' : 'pt-8'}`}>
-          <div className="max-w-3xl mx-auto flex items-end gap-4">
-            {profile.profile_image_url ? (
+        <div className={`px-6 ${profile.banner_image_url ? '-mt-8' : 'pt-6'}`}>
+          <div className="max-w-3xl mx-auto flex items-center gap-3">
+            {(coverArt || profile.profile_image_url) ? (
               <img
-                src={profile.profile_image_url}
+                src={coverArt || profile.profile_image_url || ''}
                 alt={profile.display_name}
-                className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-background object-cover shadow-lg"
+                className="w-12 h-12 rounded-full border-2 border-background object-cover shadow-md"
               />
             ) : (
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-background bg-primary/10 flex items-center justify-center shadow-lg">
-                <Music className="h-10 w-10 text-primary" />
+              <div className="w-12 h-12 rounded-full border-2 border-background bg-primary/10 flex items-center justify-center shadow-md">
+                <Music className="h-5 w-5 text-primary" />
               </div>
             )}
-            <div className="pb-2 flex-1 flex items-end justify-between">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold">{profile.display_name}</h1>
-                <p className="text-muted-foreground text-sm">@{profile.username}</p>
+            <div className="flex-1 flex items-center justify-between">
+              <div className="min-w-0">
+                <h1 className="text-sm font-semibold truncate">{profile.display_name}</h1>
+                <p className="text-muted-foreground text-xs truncate">@{profile.username}</p>
               </div>
               <div className="flex items-center gap-2">
                 {hasAccess && (
