@@ -37,6 +37,31 @@ interface MerchItemData {
   is_available: boolean;
 }
 
+// Fires once when a merch card first enters the viewport
+const MerchImpression = ({ onImpression, children }: { onImpression: () => void; children: React.ReactNode }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const firedRef = useRef(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || firedRef.current) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting && !firedRef.current) {
+            firedRef.current = true;
+            onImpression();
+            obs.disconnect();
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [onImpression]);
+  return <div ref={ref}>{children}</div>;
+};
+
 const ArtistPage = () => {
   const { username, projectKey } = useParams<{ username: string; projectKey?: string }>();
   const navigate = useNavigate();
@@ -377,23 +402,96 @@ const ArtistPage = () => {
     await audio.playTrack(trackObj);
   };
 
-  // Listen for track completion + tab close for session metrics
+  // Audio listeners: heartbeats (25/50/75%), completion, seek, volume, errors, stalls
   useEffect(() => {
     const el = audio.audioRef.current;
     if (!el) return;
+    const milestonesSent: Record<string, Set<number>> = {};
+    let lastSeekTime = 0;
+    let lastVolume = el.volume;
+    let lastMuted = el.muted;
+
     const onEnded = () => {
-      if (lastTrackIdRef.current) {
-        track('track_completed', { track_id: lastTrackIdRef.current });
+      if (lastTrackIdRef.current) track('track_completed', { track_id: lastTrackIdRef.current });
+    };
+    const onTimeUpdate = () => {
+      const id = lastTrackIdRef.current;
+      if (!id || !el.duration || !isFinite(el.duration)) return;
+      const pct = (el.currentTime / el.duration) * 100;
+      if (!milestonesSent[id]) milestonesSent[id] = new Set();
+      [25, 50, 75].forEach((m) => {
+        if (pct >= m && !milestonesSent[id].has(m)) {
+          milestonesSent[id].add(m);
+          track('track_progress', { track_id: id, milestone: m });
+        }
+      });
+      lastSeekTime = el.currentTime;
+    };
+    const onSeeking = () => {
+      const id = lastTrackIdRef.current;
+      if (!id) return;
+      const delta = el.currentTime - lastSeekTime;
+      if (Math.abs(delta) > 2) {
+        track('track_seek', {
+          track_id: id,
+          from: Math.round(lastSeekTime),
+          to: Math.round(el.currentTime),
+          direction: delta > 0 ? 'forward' : 'backward',
+        });
       }
     };
+    const onVolumeChange = () => {
+      if (el.muted !== lastMuted) {
+        track('audio_mute_toggle', { muted: el.muted });
+        lastMuted = el.muted;
+      } else if (Math.abs(el.volume - lastVolume) > 0.05) {
+        track('volume_change', { volume: Math.round(el.volume * 100) });
+        lastVolume = el.volume;
+      }
+    };
+    const onError = () => {
+      track('audio_error', {
+        track_id: lastTrackIdRef.current,
+        code: el.error?.code,
+        message: el.error?.message,
+      });
+    };
+    const onStalled = () => track('audio_stalled', { track_id: lastTrackIdRef.current });
+    const onWaiting = () => track('audio_waiting', { track_id: lastTrackIdRef.current });
+
     el.addEventListener('ended', onEnded);
-    return () => el.removeEventListener('ended', onEnded);
+    el.addEventListener('timeupdate', onTimeUpdate);
+    el.addEventListener('seeking', onSeeking);
+    el.addEventListener('volumechange', onVolumeChange);
+    el.addEventListener('error', onError);
+    el.addEventListener('stalled', onStalled);
+    el.addEventListener('waiting', onWaiting);
+    return () => {
+      el.removeEventListener('ended', onEnded);
+      el.removeEventListener('timeupdate', onTimeUpdate);
+      el.removeEventListener('seeking', onSeeking);
+      el.removeEventListener('volumechange', onVolumeChange);
+      el.removeEventListener('error', onError);
+      el.removeEventListener('stalled', onStalled);
+      el.removeEventListener('waiting', onWaiting);
+    };
   }, [audio.audioRef, track]);
+
+  // Visibility (foreground/background) — distinguishes idle vs active listening
+  useEffect(() => {
+    const onVis = () => {
+      if (!profile) return;
+      track(document.visibilityState === 'visible' ? 'tab_focused' : 'tab_hidden', {});
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [profile, track]);
 
   useEffect(() => {
     const flushSession = () => {
       if (!sessionStartRef.current || !profile) return;
       const duration = Math.round((Date.now() - sessionStartRef.current) / 1000);
+      const addedToCart = sessionStorage.getItem('cart_added_no_checkout') === '1';
       trackEvent({
         event_type: 'session_end',
         event_data: {
@@ -402,8 +500,20 @@ const ArtistPage = () => {
           access_key: usedKeyRef.current,
           duration_seconds: duration,
           ended_on: showMerch ? 'merch' : 'tracks',
+          cart_abandoned: addedToCart,
         },
       });
+      if (addedToCart) {
+        trackEvent({
+          event_type: 'cart_abandoned',
+          event_data: {
+            artist_username: profile.username,
+            artist_profile_id: profile.id,
+            access_key: usedKeyRef.current,
+            session_duration: duration,
+          },
+        });
+      }
     };
     window.addEventListener('beforeunload', flushSession);
     window.addEventListener('pagehide', flushSession);
@@ -540,22 +650,22 @@ const ArtistPage = () => {
         {!showMerch && Object.values(socialLinks).some(Boolean) && (
           <div className="flex gap-2 flex-wrap justify-center">
             {socialLinks.instagram && (
-              <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer">
+              <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" onClick={() => track('social_link_clicked', { platform: 'instagram' })}>
                 <Button variant="outline" size="sm"><Instagram className="h-4 w-4 mr-1" /> Instagram</Button>
               </a>
             )}
             {socialLinks.twitter && (
-              <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer">
+              <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" onClick={() => track('social_link_clicked', { platform: 'twitter' })}>
                 <Button variant="outline" size="sm"><Twitter className="h-4 w-4 mr-1" /> Twitter</Button>
               </a>
             )}
             {socialLinks.youtube && (
-              <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer">
+              <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" onClick={() => track('social_link_clicked', { platform: 'youtube' })}>
                 <Button variant="outline" size="sm"><Youtube className="h-4 w-4 mr-1" /> YouTube</Button>
               </a>
             )}
             {socialLinks.website && (
-              <a href={socialLinks.website} target="_blank" rel="noopener noreferrer">
+              <a href={socialLinks.website} target="_blank" rel="noopener noreferrer" onClick={() => track('social_link_clicked', { platform: 'website' })}>
                 <Button variant="outline" size="sm"><Globe className="h-4 w-4 mr-1" /> Website</Button>
               </a>
             )}
@@ -657,95 +767,130 @@ const ArtistPage = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {merch.map((m) => (
-                  <Card key={m.id} className="overflow-hidden bg-card/50 backdrop-blur-sm">
-                    {m.image_url && <img src={m.image_url} alt={m.name} className="w-full h-48 object-cover" />}
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">{m.name}</h3>
-                        <Badge variant="secondary">${Number(m.price).toFixed(2)}</Badge>
-                      </div>
-                      {m.description && (
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{m.description}</p>
+                  <MerchImpression
+                    key={m.id}
+                    onImpression={() =>
+                      track('merch_card_impression', { source: 'local', item_id: m.id, item_name: m.name, price: Number(m.price) })
+                    }
+                  >
+                    <Card className="overflow-hidden bg-card/50 backdrop-blur-sm">
+                      {m.image_url && (
+                        <img
+                          src={m.image_url}
+                          alt={m.name}
+                          className="w-full h-48 object-cover"
+                          onError={() => track('image_load_error', { source: 'merch_local', item_id: m.id })}
+                        />
                       )}
-                      {m.external_link ? (
-                        <a
-                          href={m.external_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() =>
-                            track('merch_item_clicked', {
-                              source: 'external_link',
-                              item_id: m.id,
-                              item_name: m.name,
-                              price: Number(m.price),
-                              last_song_played: lastSongPlayedRef.current,
-                            })
-                          }
-                        >
-                          <Button variant="gradient" size="sm" className="w-full">
-                            <ExternalLink className="h-4 w-4 mr-2" /> Buy Now
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">{m.name}</h3>
+                          <Badge variant="secondary">${Number(m.price).toFixed(2)}</Badge>
+                        </div>
+                        {m.description && (
+                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{m.description}</p>
+                        )}
+                        {m.external_link ? (
+                          <a
+                            href={m.external_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() =>
+                              track('merch_item_clicked', {
+                                source: 'external_link',
+                                item_id: m.id,
+                                item_name: m.name,
+                                price: Number(m.price),
+                                last_song_played: lastSongPlayedRef.current,
+                              })
+                            }
+                          >
+                            <Button variant="gradient" size="sm" className="w-full">
+                              <ExternalLink className="h-4 w-4 mr-2" /> Buy Now
+                            </Button>
+                          </a>
+                        ) : (
+                          <Button variant="gradient" size="sm" className="w-full" disabled>
+                            Coming Soon
                           </Button>
-                        </a>
-                      ) : (
-                        <Button variant="gradient" size="sm" className="w-full" disabled>
-                          Coming Soon
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
+                        )}
+                      </div>
+                    </Card>
+                  </MerchImpression>
                 ))}
                 {shopifyProducts.map((p) => {
                   const variant = p.node.variants.edges[0]?.node;
                   const img = p.node.images.edges[0]?.node;
                   if (!variant) return null;
                   return (
-                    <Card key={p.node.id} className="overflow-hidden bg-card/50 backdrop-blur-sm">
-                      {img && <img src={img.url} alt={p.node.title} className="w-full h-48 object-cover" />}
-                      <div className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{p.node.title}</h3>
-                          <Badge variant="secondary">
-                            {variant.price.currencyCode} {parseFloat(variant.price.amount).toFixed(2)}
-                          </Badge>
-                        </div>
-                        {p.node.description && (
-                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{p.node.description}</p>
+                    <MerchImpression
+                      key={p.node.id}
+                      onImpression={() =>
+                        track('merch_card_impression', {
+                          source: 'shopify',
+                          item_id: p.node.id,
+                          item_name: p.node.title,
+                          price: parseFloat(variant.price.amount),
+                          currency: variant.price.currencyCode,
+                        })
+                      }
+                    >
+                      <Card className="overflow-hidden bg-card/50 backdrop-blur-sm">
+                        {img && (
+                          <img
+                            src={img.url}
+                            alt={p.node.title}
+                            className="w-full h-48 object-cover"
+                            onError={() => track('image_load_error', { source: 'merch_shopify', item_id: p.node.id })}
+                          />
                         )}
-                        <Button
-                          variant="gradient"
-                          size="sm"
-                          className="w-full"
-                          disabled={!variant.availableForSale || cartLoading}
-                          onClick={() => {
-                            track('merch_item_clicked', {
-                              source: 'add_to_cart',
-                              item_id: p.node.id,
-                              item_name: p.node.title,
-                              variant_id: variant.id,
-                              price: parseFloat(variant.price.amount),
-                              currency: variant.price.currencyCode,
-                              last_song_played: lastSongPlayedRef.current,
-                            });
-                            addToCart({
-                              product: p,
-                              variantId: variant.id,
-                              variantTitle: variant.title,
-                              price: variant.price,
-                              quantity: 1,
-                              selectedOptions: variant.selectedOptions || [],
-                            });
-                          }}
-                        >
-                          {cartLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold">{p.node.title}</h3>
+                            <Badge variant="secondary">
+                              {variant.price.currencyCode} {parseFloat(variant.price.amount).toFixed(2)}
+                            </Badge>
+                          </div>
+                          {p.node.description && (
+                            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{p.node.description}</p>
+                          )}
+                          <Button
+                            variant="gradient"
+                            size="sm"
+                            className="w-full"
+                            disabled={!variant.availableForSale || cartLoading}
+                            onClick={() => {
+                              track('merch_item_clicked', {
+                                source: 'add_to_cart',
+                                item_id: p.node.id,
+                                item_name: p.node.title,
+                                variant_id: variant.id,
+                                price: parseFloat(variant.price.amount),
+                                currency: variant.price.currencyCode,
+                                last_song_played: lastSongPlayedRef.current,
+                              });
+                              sessionStorage.setItem('cart_added_no_checkout', '1');
+                              addToCart({
+                                product: p,
+                                variantId: variant.id,
+                                variantTitle: variant.title,
+                                price: variant.price,
+                                quantity: 1,
+                                selectedOptions: variant.selectedOptions || [],
+                              });
+                            }}
+                          >
+                            {cartLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
                           ) : variant.availableForSale ? (
                             <><ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart</>
                           ) : (
                             'Sold Out'
                           )}
-                        </Button>
-                      </div>
-                    </Card>
+                          </Button>
+                        </div>
+                      </Card>
+                    </MerchImpression>
                   );
                 })}
               </div>

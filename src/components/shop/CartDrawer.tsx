@@ -48,6 +48,7 @@ export const CartDrawer = () => {
           artist_username: window.location.pathname.split('/').filter(Boolean)[0] || null,
         },
       });
+      sessionStorage.removeItem('cart_added_no_checkout');
       window.open(url, "_blank");
       setIsOpen(false);
     }
