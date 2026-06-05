@@ -42,6 +42,7 @@ const ArtistPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const audio = useAudio();
+  const { trackEvent } = useAnalytics();
   const merchRef = React.useRef<HTMLDivElement>(null);
   const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
 
@@ -64,8 +65,39 @@ const ArtistPage = () => {
   const hasMerch = shopifyProducts.length > 0 || merch.length > 0;
   const hasBoth = audioFiles.length > 0 && hasMerch;
 
+  // --- Analytics refs (avoid re-renders) ---
+  const sessionStartRef = useRef<number | null>(null);
+  const usedKeyRef = useRef<string | null>(null);
+  const lastTrackIdRef = useRef<string | null>(null);
+  const trackStartRef = useRef<number | null>(null);
+  const lastSongPlayedRef = useRef<string | null>(null); // last song before merch nav
+  const firstPurchaseLoggedRef = useRef(false);
+
+  // Helper: enrich every event with artist + key context
+  const track = React.useCallback(
+    (event_type: string, data: Record<string, any> = {}) => {
+      trackEvent({
+        event_type,
+        event_data: {
+          artist_username: username || null,
+          artist_profile_id: profile?.id || null,
+          project_name: projectName || null,
+          access_key: usedKeyRef.current,
+          ...data,
+        },
+      });
+    },
+    [trackEvent, username, profile?.id, projectName]
+  );
+
   const revealMerch = () => {
     setShowMerch(true);
+    lastSongPlayedRef.current = audio.currentTrack?.name || null;
+    track('merch_viewed', {
+      source: 'button',
+      last_song_played: lastSongPlayedRef.current,
+      merch_count: shopifyProducts.length + merch.length,
+    });
     setTimeout(() => {
       merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
@@ -83,8 +115,23 @@ const ArtistPage = () => {
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
     if (Math.abs(dx) > 60 && Math.abs(dy) < 50) {
-      if (dx < 0) revealMerch();
-      else setShowMerch(false);
+      if (dx < 0) {
+        if (!showMerch) {
+          setShowMerch(true);
+          lastSongPlayedRef.current = audio.currentTrack?.name || null;
+          track('merch_viewed', {
+            source: 'swipe',
+            last_song_played: lastSongPlayedRef.current,
+            merch_count: shopifyProducts.length + merch.length,
+          });
+          setTimeout(() => merchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        }
+      } else {
+        if (showMerch) {
+          setShowMerch(false);
+          track('nav_to_tracks', { source: 'swipe' });
+        }
+      }
     }
   };
 
