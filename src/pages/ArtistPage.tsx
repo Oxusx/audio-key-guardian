@@ -107,6 +107,7 @@ const ArtistPage = () => {
     setShopifyProducts([]);
     setAudioFiles([]);
     setCoverArt('');
+    setProjectName('');
     setHasAccess(false);
     setAccessKey('');
     setNotFound(false);
