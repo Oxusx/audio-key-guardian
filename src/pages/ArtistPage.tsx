@@ -286,62 +286,54 @@ const ArtistPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header / Profile Section */}
-      <div className="relative">
-        {profile.banner_image_url && (
-          <div className="h-48 w-full overflow-hidden">
-            <img src={profile.banner_image_url} alt="Banner" className="w-full h-full object-cover" />
-          </div>
+      {/* Top utility bar */}
+      <div className="px-4 pt-4 pb-2 flex items-center justify-end gap-2 max-w-3xl mx-auto">
+        {hasAccess && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem('audioAccessInfo');
+              toast({ title: 'Logged out', description: 'Enter a new key to access different content.' });
+              navigate('/');
+            }}
+            title="Logout and enter a new key"
+            className="text-muted-foreground"
+          >
+            <LogOut className="h-4 w-4 mr-1" /> Logout
+          </Button>
         )}
-        <div className={`px-6 ${profile.banner_image_url ? '-mt-8' : 'pt-6'}`}>
-          <div className="max-w-3xl mx-auto flex items-center gap-3">
-            {(coverArt || profile.profile_image_url) ? (
-              <img
-                src={coverArt || profile.profile_image_url || ''}
-                alt={profile.display_name}
-                className="w-12 h-12 rounded-full border-2 border-background object-cover shadow-md"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full border-2 border-background bg-primary/10 flex items-center justify-center shadow-md">
-                <Music className="h-5 w-5 text-primary" />
-              </div>
-            )}
-            <div className="flex-1 flex items-center justify-between">
-              <div className="min-w-0">
-                <h1 className="text-sm font-semibold truncate">{profile.display_name}</h1>
-                <p className="text-muted-foreground text-xs truncate">@{profile.username}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {hasAccess && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      localStorage.removeItem('audioAccessInfo');
-                      toast({ title: 'Logged out', description: 'Enter a new key to access different content.' });
-                      navigate('/');
-                    }}
-                    title="Logout and enter a new key"
-                  >
-                    <LogOut className="h-4 w-4 mr-1" /> Logout
-                  </Button>
-                )}
-                <CartDrawer />
-              </div>
-            </div>
-          </div>
-        </div>
+        <CartDrawer />
       </div>
 
-      <div className="max-w-3xl mx-auto px-6 py-6 space-y-8">
+      <div className="max-w-3xl mx-auto px-6 pb-32 space-y-6">
+        {/* Cover Art (large, centered) */}
+        {!showMerch && (coverArt || profile.profile_image_url) && (
+          <div className="max-w-[320px] mx-auto pt-2">
+            <img
+              src={coverArt || profile.profile_image_url || ''}
+              alt={profile.display_name}
+              className="w-full aspect-square object-cover rounded-xl shadow-2xl"
+            />
+          </div>
+        )}
+
+        {/* Title block */}
+        {!showMerch && (
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight uppercase">{profile.display_name}</h1>
+            <p className="text-primary text-lg font-medium">@{profile.username}</p>
+          </div>
+        )}
+
         {/* Bio */}
-        {profile.bio && (
-          <p className="text-foreground/80 leading-relaxed">{profile.bio}</p>
+        {profile.bio && !showMerch && (
+          <p className="text-foreground/80 leading-relaxed text-sm text-center">{profile.bio}</p>
         )}
 
         {/* Social Links */}
-        {Object.values(socialLinks).some(Boolean) && (
-          <div className="flex gap-3 flex-wrap">
+        {!showMerch && Object.values(socialLinks).some(Boolean) && (
+          <div className="flex gap-2 flex-wrap justify-center">
             {socialLinks.instagram && (
               <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm"><Instagram className="h-4 w-4 mr-1" /> Instagram</Button>
@@ -365,12 +357,7 @@ const ArtistPage = () => {
           </div>
         )}
 
-        {/* Cover Art */}
-        {coverArt && (
-          <div className="max-w-sm mx-auto">
-            <img src={coverArt} alt="Album Cover" className="w-full aspect-square object-cover rounded-2xl shadow-glow" />
-          </div>
-        )}
+
 
         {/* Access Key Input (if required) */}
         {profile.require_key && !hasAccess && (
@@ -397,43 +384,40 @@ const ArtistPage = () => {
 
         {/* Track List */}
         {hasAccess && audioFiles.length > 0 && !showMerch && (
-          <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Music className="h-5 w-5" /> Tracks
-              {hasMerch && (
+          <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="pt-2">
+            {hasMerch && (
+              <div className="flex justify-end mb-2">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
+                  className="h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
                   onClick={revealMerch}
                 >
                   <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Merch
                 </Button>
-              )}
-            </h2>
-            <div className="space-y-1">
-              {audioFiles.map((file, index) => (
-                <div
-                  key={file.id}
-                  className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all cursor-pointer ${
-                    audio.currentTrack?.id === file.id ? 'bg-primary/10' : 'hover:bg-muted/30'
-                  }`}
-                  onClick={() => playTrack(file)}
-                >
-                  <span className="text-muted-foreground text-sm w-6">{index + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-medium truncate ${audio.currentTrack?.id === file.id ? 'text-primary' : ''}`}>
-                      {file.file_name}
-                    </p>
+              </div>
+            )}
+            <div className="divide-y divide-border/40">
+              {audioFiles.map((file, index) => {
+                const isCurrent = audio.currentTrack?.id === file.id;
+                return (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-4 py-3 cursor-pointer"
+                    onClick={() => playTrack(file)}
+                  >
+                    <span className={`text-base w-6 text-center ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {isCurrent && audio.isPlaying ? <Pause className="h-4 w-4 mx-auto" fill="currentColor" /> : index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-base truncate ${isCurrent ? 'text-primary font-medium' : 'text-foreground'}`}>
+                        {file.file_name}
+                      </p>
+                    </div>
                   </div>
-                  {audio.currentTrack?.id === file.id && audio.isPlaying ? (
-                    <Pause className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Play className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
