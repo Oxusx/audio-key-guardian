@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, Heart, Unlock, Instagram, Twitter, Youtube, Globe, ShoppingBag, ExternalLink, Music, SkipForward, Loader2, ShoppingCart } from 'lucide-react';
+import { Play, Pause, Heart, Unlock, Instagram, Twitter, Youtube, Globe, ShoppingBag, ExternalLink, Music, SkipForward, Loader2, ShoppingCart, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAudio } from '@/contexts/AudioContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -311,7 +311,23 @@ const ArtistPage = () => {
                 <h1 className="text-2xl md:text-3xl font-bold">{profile.display_name}</h1>
                 <p className="text-muted-foreground text-sm">@{profile.username}</p>
               </div>
-              <CartDrawer />
+              <div className="flex items-center gap-2">
+                {hasAccess && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      localStorage.removeItem('audioAccessInfo');
+                      toast({ title: 'Logged out', description: 'Enter a new key to access different content.' });
+                      navigate('/');
+                    }}
+                    title="Logout and enter a new key"
+                  >
+                    <LogOut className="h-4 w-4 mr-1" /> Logout
+                  </Button>
+                )}
+                <CartDrawer />
+              </div>
             </div>
           </div>
         </div>
