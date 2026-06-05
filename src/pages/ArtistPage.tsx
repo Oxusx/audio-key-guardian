@@ -324,8 +324,33 @@ const ArtistPage = () => {
         {/* Title block */}
         {!showMerch && (
           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight uppercase">{profile.display_name}</h1>
-            <p className="text-primary text-lg font-medium">@{profile.username}</p>
+            <h1 className="text-2xl font-bold tracking-tight uppercase">
+              {projectName || profile.display_name}
+            </h1>
+            <p className="text-primary text-lg font-medium">{profile.display_name}</p>
+          </div>
+        )}
+
+        {/* Play / Shuffle */}
+        {hasAccess && audioFiles.length > 0 && !showMerch && (
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <Button
+              variant="secondary"
+              className="h-12 bg-card text-primary hover:bg-card/80 font-semibold text-base"
+              onClick={() => audioFiles[0] && playTrack(audioFiles[0])}
+            >
+              <Play className="h-5 w-5 mr-2" fill="currentColor" /> Play
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-12 bg-card text-primary hover:bg-card/80 font-semibold text-base"
+              onClick={() => {
+                const rand = audioFiles[Math.floor(Math.random() * audioFiles.length)];
+                if (rand) playTrack(rand);
+              }}
+            >
+              <Shuffle className="h-5 w-5 mr-2" /> Shuffle
+            </Button>
           </div>
         )}
 
