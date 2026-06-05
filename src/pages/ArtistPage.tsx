@@ -258,23 +258,68 @@ const ArtistPage = () => {
       if (error) throw error;
 
       const row = Array.isArray(validation) ? validation[0] : validation;
+      if (!row || !row.is_valid) {
+        trackEvent({
+          event_type: 'key_entered',
+          event_data: {
+            artist_username: profileData.username,
+            artist_profile_id: profileData.id,
+            access_key: code,
+            success: false,
+            reason: !row ? 'invalid' : 'expired_or_inactive',
+            source: silent ? 'url' : 'form',
+            referrer: document.referrer || null,
+          },
+        });
+      }
       if (!row) {
         if (!silent) toast({ title: 'Invalid key', description: 'This key is not valid for this artist.', variant: 'destructive' });
         return false;
       }
-
       if (!row.is_valid) {
         if (!silent) toast({ title: 'Key expired or inactive', description: 'This key is no longer valid.', variant: 'destructive' });
         return false;
       }
 
       setHasAccess(true);
+      usedKeyRef.current = code;
+      sessionStartRef.current = Date.now();
       localStorage.setItem(`artist_access_${profileData.id}`, JSON.stringify({
         accessType: row.access_type,
         expiresAt: row.expires_at,
         includesMerch: row.includes_merch,
         enteredAt: new Date().toISOString(),
       }));
+
+      // Returning vs new key holder
+      const visitsKey = `artist_visits_${profileData.id}_${code}`;
+      const priorVisits = parseInt(localStorage.getItem(visitsKey) || '0', 10);
+      localStorage.setItem(visitsKey, String(priorVisits + 1));
+
+      trackEvent({
+        event_type: 'key_entered',
+        event_data: {
+          artist_username: profileData.username,
+          artist_profile_id: profileData.id,
+          access_key: code,
+          access_type: row.access_type,
+          includes_merch: row.includes_merch,
+          success: true,
+          source: silent ? 'url' : 'form',
+          referrer: document.referrer || null,
+          is_returning: priorVisits > 0,
+          visit_count: priorVisits + 1,
+        },
+      });
+      trackEvent({
+        event_type: 'session_start',
+        event_data: {
+          artist_username: profileData.username,
+          artist_profile_id: profileData.id,
+          access_key: code,
+          is_returning: priorVisits > 0,
+        },
+      });
 
       await loadAudioFiles(profileData.user_id);
       if (!silent) {
@@ -294,15 +339,80 @@ const ArtistPage = () => {
   };
 
   const playTrack = async (file: any) => {
-    const track = {
+    const isReplay = lastTrackIdRef.current === file.id;
+    const isSkip =
+      lastTrackIdRef.current !== null &&
+      lastTrackIdRef.current !== file.id &&
+      trackStartRef.current !== null &&
+      audio.duration > 0 &&
+      audio.currentTime < audio.duration - 1;
+
+    if (isSkip) {
+      track('track_skipped', {
+        from_track_id: lastTrackIdRef.current,
+        played_seconds: Math.round(audio.currentTime),
+        track_duration: Math.round(audio.duration),
+      });
+    }
+    if (isReplay) {
+      track('track_replayed', { track_id: file.id, track_name: file.file_name });
+    }
+
+    track('track_played', {
+      track_id: file.id,
+      track_name: file.file_name,
+      replay: isReplay,
+    });
+
+    lastTrackIdRef.current = file.id;
+    trackStartRef.current = Date.now();
+
+    const trackObj = {
       id: file.id,
       name: file.file_name,
       duration: file.duration || '0:00',
       size: file.file_size || '',
       url: file.file_url,
     };
-    await audio.playTrack(track);
+    await audio.playTrack(trackObj);
   };
+
+  // Listen for track completion + tab close for session metrics
+  useEffect(() => {
+    const el = audio.audioRef.current;
+    if (!el) return;
+    const onEnded = () => {
+      if (lastTrackIdRef.current) {
+        track('track_completed', { track_id: lastTrackIdRef.current });
+      }
+    };
+    el.addEventListener('ended', onEnded);
+    return () => el.removeEventListener('ended', onEnded);
+  }, [audio.audioRef, track]);
+
+  useEffect(() => {
+    const flushSession = () => {
+      if (!sessionStartRef.current || !profile) return;
+      const duration = Math.round((Date.now() - sessionStartRef.current) / 1000);
+      trackEvent({
+        event_type: 'session_end',
+        event_data: {
+          artist_username: profile.username,
+          artist_profile_id: profile.id,
+          access_key: usedKeyRef.current,
+          duration_seconds: duration,
+          ended_on: showMerch ? 'merch' : 'tracks',
+        },
+      });
+    };
+    window.addEventListener('beforeunload', flushSession);
+    window.addEventListener('pagehide', flushSession);
+    return () => {
+      window.removeEventListener('beforeunload', flushSession);
+      window.removeEventListener('pagehide', flushSession);
+      flushSession();
+    };
+  }, [profile, showMerch, trackEvent]);
 
   const trackList = audioFiles.map((f) => ({
     id: f.id,
