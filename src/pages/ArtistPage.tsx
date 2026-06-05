@@ -396,7 +396,7 @@ const ArtistPage = () => {
         )}
 
         {/* Track List */}
-        {hasAccess && audioFiles.length > 0 && (
+        {hasAccess && audioFiles.length > 0 && !showMerch && (
           <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Music className="h-5 w-5" /> Tracks
@@ -406,8 +406,7 @@ const ArtistPage = () => {
                   variant="ghost"
                   size="sm"
                   className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
-                  onClick={() => (showMerch ? setShowMerch(false) : revealMerch())}
-                  aria-expanded={showMerch}
+                  onClick={revealMerch}
                 >
                   <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Merch
                 </Button>
@@ -439,7 +438,7 @@ const ArtistPage = () => {
           </div>
         )}
 
-        {hasAccess && audioFiles.length === 0 && (
+        {hasAccess && audioFiles.length === 0 && !showMerch && (
           <div className="text-center py-8">
             <Music className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No tracks available yet</p>
