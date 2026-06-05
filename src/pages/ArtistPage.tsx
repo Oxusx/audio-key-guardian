@@ -887,9 +887,10 @@ const ArtistPage = () => {
                           ) : (
                             'Sold Out'
                           )}
-                        </Button>
-                      </div>
-                    </Card>
+                          </Button>
+                        </div>
+                      </Card>
+                    </MerchImpression>
                   );
                 })}
               </div>
