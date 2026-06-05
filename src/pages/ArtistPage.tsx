@@ -447,10 +447,19 @@ const ArtistPage = () => {
 
         {/* Merch Section */}
         {showMerch && hasMerch && (
-          <div ref={merchRef} className="scroll-mt-4">
+          <div ref={merchRef} className="scroll-mt-4" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Merch
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-8 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
+                onClick={() => setShowMerch(false)}
+              >
+                <Music className="h-3.5 w-3.5 mr-1" /> Tracks
+              </Button>
             </h2>
             {productsLoading && shopifyProducts.length === 0 && merch.length === 0 ? (
               <div className="flex items-center justify-center py-8">
@@ -531,6 +540,24 @@ const ArtistPage = () => {
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* Page indicator dots */}
+        {hasAccess && hasMerch && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              type="button"
+              aria-label="Show tracks"
+              onClick={() => setShowMerch(false)}
+              className={`h-2 rounded-full transition-all ${!showMerch ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/40'}`}
+            />
+            <button
+              type="button"
+              aria-label="Show merch"
+              onClick={revealMerch}
+              className={`h-2 rounded-full transition-all ${showMerch ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/40'}`}
+            />
           </div>
         )}
 
