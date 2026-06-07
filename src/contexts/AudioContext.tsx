@@ -24,6 +24,7 @@ interface AudioContextType {
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   seekTo: (time: number) => void;
+  stopAndReset: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
