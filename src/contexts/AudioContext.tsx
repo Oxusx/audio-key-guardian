@@ -245,6 +245,7 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
         setVolume,
         toggleMute,
         seekTo,
+        stopAndReset,
       }}
     >
       {children}
