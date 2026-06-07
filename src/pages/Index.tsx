@@ -210,6 +210,7 @@ const Index = () => {
           },
         });
         
+        audio.stopAndReset();
         setIsAuthenticated(false);
         setAccessInfo(null);
         localStorage.removeItem('audioAccessInfo');
