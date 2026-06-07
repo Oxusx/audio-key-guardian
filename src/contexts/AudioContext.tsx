@@ -207,6 +207,27 @@ export const AudioProvider = ({ children }: AudioProviderProps) => {
     }
   };
 
+  const stopAndReset = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      try {
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+      } catch {}
+    }
+    setIsPlaying(false);
+    setCurrentTrack(null);
+    setCurrentTime(0);
+    setDuration(0);
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      } catch {}
+    }
+  };
+
   return (
     <AudioContext.Provider
       value={{
