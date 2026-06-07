@@ -265,6 +265,7 @@ const Index = () => {
       action_details: { reason: 'manual', from: 'index' },
     });
     
+    audio.stopAndReset();
     setIsAuthenticated(false);
     setAccessInfo(null);
     setPassword('');
