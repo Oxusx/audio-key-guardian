@@ -207,6 +207,11 @@ const UserAccess = () => {
   };
 
   const logout = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.removeAttribute('src');
+      audioRef.current.load();
+    }
     setIsAuthenticated(false);
     setAccessInfo(null);
     setPassword('');
