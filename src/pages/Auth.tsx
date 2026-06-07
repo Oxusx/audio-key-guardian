@@ -208,7 +208,11 @@ const Auth = () => {
           </p>
         </div>
 
-        <Tabs value={isSignUp ? 'signup' : 'signin'} onValueChange={(v) => setIsSignUp(v === 'signup')}>
+        <Tabs value={isSignUp ? 'signup' : 'signin'} onValueChange={(v) => {
+          setIsSignUp(v === 'signup');
+          setEmail(''); setPassword(''); setConfirmPassword(''); setUsername(''); setDisplayName('');
+        }}>
+
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
