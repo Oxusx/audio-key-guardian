@@ -168,15 +168,15 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label>Key Label (optional)</Label>
+          <Label>Key Code (optional)</Label>
           <Input
             value={keyName}
-            onChange={(e) => setKeyName(e.target.value)}
-            placeholder="e.g. VIP, Friends & Family, Press"
+            onChange={(e) => setKeyName(e.target.value.toUpperCase())}
+            placeholder="e.g. OPEN FOR ALL — leave blank to auto-generate"
             maxLength={50}
-            className="mt-1"
+            className="mt-1 font-mono"
           />
-          <p className="text-xs text-muted-foreground mt-1">A name to help you remember who this key is for</p>
+          <p className="text-xs text-muted-foreground mt-1">Type the exact key you want, or leave blank for a random one</p>
         </div>
 
         <div>
