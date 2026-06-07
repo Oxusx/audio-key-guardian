@@ -90,7 +90,7 @@ const SalesAndPayouts = () => {
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5" /> Sales & Payouts
         </CardTitle>
-        <CardDescription>10% platform fee — the rest is yours. Cash out anytime to your bank.</CardDescription>
+        <CardDescription>7% platform fee — the rest is yours. Cash out anytime to your bank.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Stats */}

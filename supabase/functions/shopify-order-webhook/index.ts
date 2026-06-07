@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "*",
 };
 
-const PLATFORM_FEE_RATE = 0.10; // 10%
+const PLATFORM_FEE_RATE = 0.07; // 7%
 const PLATFORM_FEE_RECIPIENT_USERNAME = "ox"; // Ox = godscircle (label) — fees flow here
 
 async function verifyHmac(rawBody: string, hmacHeader: string, secret: string): Promise<boolean> {
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       if (!error) {
         inserted.push(item.id);
 
-        // Also credit the 10% platform fee as a sale on the godscircle dashboard
+        // Also credit the 7% platform fee as a sale on the godscircle dashboard
         if (profile.username !== PLATFORM_FEE_RECIPIENT_USERNAME && platformFee > 0) {
           const { data: feeProfile } = await supabase
             .from("artist_profiles")
