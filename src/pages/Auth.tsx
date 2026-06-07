@@ -208,7 +208,11 @@ const Auth = () => {
           </p>
         </div>
 
-        <Tabs value={isSignUp ? 'signup' : 'signin'} onValueChange={(v) => setIsSignUp(v === 'signup')}>
+        <Tabs value={isSignUp ? 'signup' : 'signin'} onValueChange={(v) => {
+          setIsSignUp(v === 'signup');
+          setEmail(''); setPassword(''); setConfirmPassword(''); setUsername(''); setDisplayName('');
+        }}>
+
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -256,7 +260,11 @@ const Auth = () => {
           </TabsContent>
 
           <TabsContent value="signup">
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={handleAuth} className="space-y-4" autoComplete="off">
+              {/* Hidden decoys to defeat browser autofill targeting the real fields */}
+              <input type="text" name="username" autoComplete="username" className="hidden" tabIndex={-1} aria-hidden="true" />
+              <input type="password" name="password" autoComplete="current-password" className="hidden" tabIndex={-1} aria-hidden="true" />
+
               <div>
                 <label className="block text-sm font-medium mb-2">Display Name</label>
                 <Input
@@ -266,6 +274,8 @@ const Auth = () => {
                   placeholder="Your name or brand"
                   required
                   maxLength={60}
+                  autoComplete="off"
+                  name="signup-display-name"
                 />
               </div>
 
@@ -283,6 +293,8 @@ const Auth = () => {
                     required
                     minLength={3}
                     maxLength={30}
+                    autoComplete="off"
+                    name="signup-username"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -298,6 +310,8 @@ const Auth = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
+                  autoComplete="off"
+                  name="signup-email"
                 />
               </div>
 
@@ -310,6 +324,8 @@ const Auth = () => {
                   placeholder="••••••••"
                   required
                   minLength={6}
+                  autoComplete="new-password"
+                  name="signup-password"
                 />
               </div>
 
@@ -322,8 +338,11 @@ const Auth = () => {
                   placeholder="••••••••"
                   required
                   minLength={6}
+                  autoComplete="new-password"
+                  name="signup-password-confirm"
                 />
               </div>
+
 
               <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
                 {loading ? 'Creating your page...' : 'Create My Page'}
