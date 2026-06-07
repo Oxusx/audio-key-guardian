@@ -164,23 +164,22 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
           <Key className="h-5 w-5" />
           Access Keys
         </CardTitle>
-        <CardDescription>Generate keys for private music access</CardDescription>
+        <CardDescription>Unlock keys for your fans</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label>Key Code (optional)</Label>
+          <Label>Key</Label>
           <Input
             value={keyName}
             onChange={(e) => setKeyName(e.target.value.toUpperCase())}
-            placeholder="e.g. OPEN FOR ALL — leave blank to auto-generate"
+            placeholder="Type a key or leave blank"
             maxLength={50}
             className="mt-1 font-mono"
           />
-          <p className="text-xs text-muted-foreground mt-1">Type the exact key you want, or leave blank for a random one</p>
         </div>
 
         <div>
-          <Label>Access Duration</Label>
+          <Label>Duration</Label>
           <Select value={selectedAccessType} onValueChange={(v: any) => setSelectedAccessType(v)}>
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -194,16 +193,13 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">Include Merch Access</p>
-              <p className="text-xs text-muted-foreground">Key holders can access exclusive merch</p>
-            </div>
+            <p className="text-sm font-medium">Include Merch</p>
           </div>
           <Switch checked={includesMerch} onCheckedChange={setIncludesMerch} />
         </div>
 
         <Button onClick={generateKey} className="w-full" variant="gradient" disabled={!hasAudioFiles}>
-          Generate Key {includesMerch ? '(Music + Merch)' : '(Music Only)'}
+          Generate Key
         </Button>
 
         <div className="space-y-2 max-h-64 overflow-y-auto">

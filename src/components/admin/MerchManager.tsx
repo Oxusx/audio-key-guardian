@@ -106,21 +106,21 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShoppingBag className="h-5 w-5" />
-          Merch Store
+          Merch
         </CardTitle>
-        <CardDescription>Add merchandise items to your artist page ({items.length} items)</CardDescription>
+        <CardDescription>{items.length} items</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!showAddForm ? (
           <Button onClick={() => setShowAddForm(true)} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Merch Item
+            <Plus className="h-4 w-4 mr-2" /> Add Item
           </Button>
         ) : (
           <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <Label>Item Name</Label>
-                <Input value={newItem.name} onChange={(e) => setNewItem(i => ({ ...i, name: e.target.value }))} placeholder="T-Shirt, Poster, etc." className="mt-1" />
+                <Label>Name</Label>
+                <Input value={newItem.name} onChange={(e) => setNewItem(i => ({ ...i, name: e.target.value }))} placeholder="T-Shirt" className="mt-1" />
               </div>
               <div>
                 <Label>Price ($)</Label>
@@ -128,20 +128,12 @@ const MerchManager = ({ artistProfileId }: MerchManagerProps) => {
               </div>
             </div>
             <div>
-              <Label>Description</Label>
-              <Textarea value={newItem.description} onChange={(e) => setNewItem(i => ({ ...i, description: e.target.value }))} placeholder="Describe the item..." className="mt-1" rows={2} />
-            </div>
-            <div>
-              <Label>Item Image</Label>
+              <Label>Image</Label>
               <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-1" />
-            </div>
-            <div>
-              <Label>Purchase Link (optional)</Label>
-              <Input value={newItem.external_link} onChange={(e) => setNewItem(i => ({ ...i, external_link: e.target.value }))} placeholder="https://your-store.com/item" className="mt-1" />
             </div>
             <div className="flex gap-2">
               <Button onClick={handleAddItem} variant="gradient" className="flex-1" disabled={saving}>
-                {saving ? 'Adding...' : 'Add Item'}
+                {saving ? 'Adding...' : 'Add'}
               </Button>
               <Button onClick={() => { setShowAddForm(false); setImageFile(null); }} variant="outline">Cancel</Button>
             </div>
