@@ -62,9 +62,13 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
     else if (selectedAccessType === '48h') expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
     try {
+      const customCode = keyName.trim().toUpperCase();
+      const useCustom = customCode.length > 0;
+
       let lastError: any = null;
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const keyCode = generateUniqueCode();
+      const attempts = useCustom ? 1 : 5;
+      for (let attempt = 0; attempt < attempts; attempt++) {
+        const keyCode = useCustom ? customCode : generateUniqueCode();
         const insertData: any = {
           key_code: keyCode,
           access_type: selectedAccessType,
@@ -77,14 +81,20 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
 
         const { error } = await supabase.from('access_keys').insert(insertData);
         if (!error) {
-          toast({ title: 'Key generated', description: `${keyName.trim() ? keyName.trim() + ': ' : ''}${keyCode}` });
+          toast({ title: 'Key generated', description: keyCode });
           setKeyName('');
           await loadKeys();
           return;
         }
         lastError = error;
-        // Only retry on unique violation
-        if (error.code !== '23505') break;
+        if (error.code === '23505') {
+          if (useCustom) {
+            toast({ title: 'Duplicate', description: 'That key is already in use. Pick another.', variant: 'destructive' });
+            return;
+          }
+          continue;
+        }
+        break;
       }
       throw lastError || new Error('Could not generate a unique key, please try again.');
     } catch (error: any) {
@@ -158,15 +168,15 @@ const KeyGeneratorWithMerch = ({ userId, artistProfileId, hasAudioFiles }: KeyGe
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label>Key Label (optional)</Label>
+          <Label>Key Code (optional)</Label>
           <Input
             value={keyName}
-            onChange={(e) => setKeyName(e.target.value)}
-            placeholder="e.g. VIP, Friends & Family, Press"
+            onChange={(e) => setKeyName(e.target.value.toUpperCase())}
+            placeholder="e.g. OPEN FOR ALL — leave blank to auto-generate"
             maxLength={50}
-            className="mt-1"
+            className="mt-1 font-mono"
           />
-          <p className="text-xs text-muted-foreground mt-1">A name to help you remember who this key is for</p>
+          <p className="text-xs text-muted-foreground mt-1">Type the exact key you want, or leave blank for a random one</p>
         </div>
 
         <div>
