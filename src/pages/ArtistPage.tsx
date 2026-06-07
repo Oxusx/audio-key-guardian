@@ -583,6 +583,7 @@ const ArtistPage = () => {
             size="sm"
             onClick={() => {
               track('logout', { ended_on: showMerch ? 'merch' : 'tracks' });
+              audio.stopAndReset();
               localStorage.removeItem('audioAccessInfo');
               toast({ title: 'Logged out', description: 'Enter a new key to access different content.' });
               navigate('/');

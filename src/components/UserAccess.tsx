@@ -106,6 +106,13 @@ const UserAccess = () => {
     if (accessInfo && accessInfo.expiresAt) {
       const now = new Date();
       if (now > accessInfo.expiresAt) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.removeAttribute('src');
+          audioRef.current.load();
+        }
+        setCurrentPlaying(null);
+        setIsPlaying(false);
         setIsAuthenticated(false);
         setAccessInfo(null);
         localStorage.removeItem('audioAccessInfo');
@@ -200,6 +207,11 @@ const UserAccess = () => {
   };
 
   const logout = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.removeAttribute('src');
+      audioRef.current.load();
+    }
     setIsAuthenticated(false);
     setAccessInfo(null);
     setPassword('');
