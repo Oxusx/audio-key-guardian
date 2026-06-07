@@ -179,14 +179,11 @@ const ArtistDashboard = () => {
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Artist Dashboard
             </h1>
-            <p className="text-muted-foreground text-sm">Manage your music, merch, keys, and profile</p>
+            <p className="text-muted-foreground text-sm">Music, merch, and keys</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => navigate('/analytics')}>
               <BarChart className="h-4 w-4 mr-2" /> Analytics
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
-              <FileText className="h-4 w-4 mr-2" /> Investments
             </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" /> Sign Out
@@ -200,8 +197,6 @@ const ArtistDashboard = () => {
           onProfileSaved={(profile) => { setArtistProfileId(profile.id); setArtistUsername(profile.username); }}
         />
 
-        
-
         <SalesAndPayouts />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -209,11 +204,11 @@ const ArtistDashboard = () => {
           <Card className="shadow-elegant">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" /> Audio Files
+                <Upload className="h-5 w-5" /> Music
               </CardTitle>
-              <CardDescription>{audioFiles.length} uploaded — no limit</CardDescription>
+              <CardDescription>{audioFiles.length} uploaded</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <Input
                 type="file"
                 accept=".wav,.mp3,audio/*"
@@ -221,26 +216,15 @@ const ArtistDashboard = () => {
                 onChange={handleFileUpload}
                 disabled={uploadingFiles}
               />
-
               <div className="space-y-2">
                 {audioFiles.map((file) => (
                   <div key={file.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">{file.file_name}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(file.created_at).toLocaleDateString()}</p>
-                    </div>
+                    <p className="font-medium text-sm truncate flex-1">{file.file_name}</p>
                     <Button variant="ghost" size="sm" onClick={() => deleteFile(file.id, file.file_url)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
-              </div>
-              <div className="border-t pt-4">
-                <Label>Cover Art</Label>
-                <Input type="file" accept="image/*" onChange={handleCoverArtUpload} className="mt-1" />
-                {coverArtPreview && (
-                  <img src={coverArtPreview} alt="Cover" className="w-16 h-16 rounded mt-2 object-cover" />
-                )}
               </div>
             </CardContent>
           </Card>
@@ -260,48 +244,21 @@ const ArtistDashboard = () => {
         <Card className="shadow-elegant">
           <CardHeader>
             <CardTitle>Project Settings</CardTitle>
-            <CardDescription>Choose whether to accept investments and set a goal</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Accept Investments</p>
-                  <p className="text-xs text-muted-foreground">Show an Invest button to key-holders</p>
-                </div>
-              </div>
-              <Switch checked={acceptInvestments} onCheckedChange={setAcceptInvestments} />
+            <div>
+              <Label>Project Name</Label>
+              <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="mt-1" />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Project Name</Label>
-                <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <Label>Investment Budget ($)</Label>
-                <Input type="number" min="0" step="100" value={investmentBudget} onChange={(e) => setInvestmentBudget(Number(e.target.value))} className="mt-1" />
-              </div>
-              <div>
-                <Label>Expected ROI (%)</Label>
-                <Input type="number" min="0" max="100" value={roiPercentage} onChange={(e) => setRoiPercentage(Number(e.target.value))} className="mt-1" />
-              </div>
+            <div>
+              <Label>Cover Art</Label>
+              <Input type="file" accept="image/*" onChange={handleCoverArtUpload} className="mt-1" />
+              {coverArtPreview && (
+                <img src={coverArtPreview} alt="Cover" className="w-16 h-16 rounded mt-2 object-cover" />
+              )}
             </div>
-            {investmentBudget > 0 && (
-              <div className="p-3 bg-muted rounded-lg grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Admin (51%)</p>
-                  <p className="font-semibold text-primary">${(investmentBudget * 0.51).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Users (49%)</p>
-                  <p className="font-semibold">${(investmentBudget * 0.49).toLocaleString()}</p>
-                </div>
-              </div>
-            )}
             <Button onClick={handleSaveProjectSettings} variant="gradient" className="w-full">
-              Save Project Settings
+              Save
             </Button>
           </CardContent>
         </Card>
