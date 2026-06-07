@@ -119,6 +119,7 @@ const Player = () => {
       action_type: 'access_expired',
       action_details: { reason: 'automatic', expiresAt: accessExpiresAt },
     });
+    audio.stopAndReset();
     localStorage.removeItem('audioAccessInfo');
     toast({
       title: "Access expired",
@@ -132,6 +133,7 @@ const Player = () => {
       action_type: 'user_logout',
       action_details: { reason: 'manual', from: 'player' },
     });
+    audio.stopAndReset();
     localStorage.removeItem('audioAccessInfo');
     toast({
       title: "Logged out",
