@@ -10,6 +10,7 @@ import { Upload, LogOut, BarChart, Music, Trash2, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { audioMatchesVideo } from '@/lib/audioMatch';
 import ArtistProfileForm from '@/components/admin/ArtistProfileForm';
 import MerchManager from '@/components/admin/MerchManager';
 import KeyGeneratorWithMerch from '@/components/admin/KeyGeneratorWithMerch';
@@ -104,9 +105,30 @@ const ArtistDashboard = () => {
     }
   };
 
+  const [verifyingTrackId, setVerifyingTrackId] = useState<string | null>(null);
+
   const handleVideoUpload = async (trackId: string, file: File) => {
     if (!user) return;
+    const track = audioFiles.find((f) => f.id === trackId);
+    if (!track) return;
+    setVerifyingTrackId(trackId);
     try {
+      toast({ title: 'Checking audio match…', description: 'Verifying the video uses the same audio.' });
+      const audioRes = await fetch(track.file_url);
+      if (!audioRes.ok) throw new Error('Could not load original audio for verification.');
+      const audioBlob = await audioRes.blob();
+      const audioFile = new File([audioBlob], track.file_name, { type: audioBlob.type || 'audio/mpeg' });
+
+      const result = await audioMatchesVideo(audioFile, file);
+      if (!result.match) {
+        toast({
+          title: 'Audio doesn’t match',
+          description: (result.reason || 'The video audio must match the uploaded track.') + ' Upload blocked for copyright protection.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const ext = file.name.split('.').pop();
       const path = `${user.id}/videos/${trackId}.${ext}`;
       const { error: upErr } = await supabase.storage.from('audio-files').upload(path, file, { upsert: true });
@@ -115,9 +137,11 @@ const ArtistDashboard = () => {
       const { error } = await supabase.from('audio_files').update({ video_url: publicUrl } as any).eq('id', trackId);
       if (error) throw error;
       await loadAdminData();
-      toast({ title: 'Visual added' });
+      toast({ title: 'Visual added', description: `Audio match ${(result.similarity * 100).toFixed(0)}%.` });
     } catch (error: any) {
       toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setVerifyingTrackId(null);
     }
   };
 
@@ -253,9 +277,9 @@ const ArtistDashboard = () => {
                           e.target.value = '';
                         }}
                       />
-                      <Button variant="ghost" size="sm" asChild>
+                      <Button variant="ghost" size="sm" asChild disabled={verifyingTrackId === file.id}>
                         <span title={file.video_url ? 'Replace visual' : 'Add visual'}>
-                          <Video className={`h-4 w-4 ${file.video_url ? 'text-primary' : ''}`} />
+                          <Video className={`h-4 w-4 ${verifyingTrackId === file.id ? 'animate-pulse' : ''} ${file.video_url ? 'text-primary' : ''}`} />
                         </span>
                       </Button>
                     </label>
