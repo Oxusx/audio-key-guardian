@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Upload, LogOut, BarChart, Music, Trash2 } from 'lucide-react';
+import { Upload, LogOut, BarChart, Music, Trash2, Video } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -95,11 +95,29 @@ const ArtistDashboard = () => {
         if (dbError) throw dbError;
       }
       await loadAdminData();
-      toast({ title: 'Files uploaded', description: `${files.length} file(s) uploaded.` });
+      toast({ title: 'Uploaded', description: `${files.length} track(s). Add a visual from the track row if you have one.` });
     } catch (error: any) {
       toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
     } finally {
       setUploadingFiles(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleVideoUpload = async (trackId: string, file: File) => {
+    if (!user) return;
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${user.id}/videos/${trackId}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('audio-files').upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from('audio-files').getPublicUrl(path);
+      const { error } = await supabase.from('audio_files').update({ video_url: publicUrl } as any).eq('id', trackId);
+      if (error) throw error;
+      await loadAdminData();
+      toast({ title: 'Visual added' });
+    } catch (error: any) {
+      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -216,10 +234,31 @@ const ArtistDashboard = () => {
                 onChange={handleFileUpload}
                 disabled={uploadingFiles}
               />
+              <p className="text-xs text-muted-foreground">Got a visual? Tap the 🎬 on a track to attach a video.</p>
               <div className="space-y-2">
                 {audioFiles.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <p className="font-medium text-sm truncate flex-1">{file.file_name}</p>
+                  <div key={file.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <p className="font-medium text-sm truncate flex-1 flex items-center gap-1.5">
+                      {file.file_name}
+                      {file.video_url && <Video className="h-3.5 w-3.5 text-primary shrink-0" />}
+                    </p>
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleVideoUpload(file.id, f);
+                          e.target.value = '';
+                        }}
+                      />
+                      <Button variant="ghost" size="sm" asChild>
+                        <span title={file.video_url ? 'Replace visual' : 'Add visual'}>
+                          <Video className={`h-4 w-4 ${file.video_url ? 'text-primary' : ''}`} />
+                        </span>
+                      </Button>
+                    </label>
                     <Button variant="ghost" size="sm" onClick={() => deleteFile(file.id, file.file_url)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>

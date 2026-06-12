@@ -727,8 +727,9 @@ const ArtistPage = () => {
                       {isCurrent && audio.isPlaying ? <Pause className="h-4 w-4 mx-auto" fill="currentColor" /> : index + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-base truncate ${isCurrent ? 'text-primary font-medium' : 'text-foreground'}`}>
+                      <p className={`text-base truncate flex items-center gap-1.5 ${isCurrent ? 'text-primary font-medium' : 'text-foreground'}`}>
                         {file.file_name}
+                        {file.video_url && <Video className="h-3.5 w-3.5 text-primary shrink-0" />}
                       </p>
                     </div>
                   </div>
