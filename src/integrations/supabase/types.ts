@@ -286,6 +286,7 @@ export type Database = {
           file_size: string | null
           file_url: string
           id: string
+          video_url: string | null
         }
         Insert: {
           admin_id: string
@@ -295,6 +296,7 @@ export type Database = {
           file_size?: string | null
           file_url: string
           id?: string
+          video_url?: string | null
         }
         Update: {
           admin_id?: string
@@ -304,6 +306,7 @@ export type Database = {
           file_size?: string | null
           file_url?: string
           id?: string
+          video_url?: string | null
         }
         Relationships: []
       }
